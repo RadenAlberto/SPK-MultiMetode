@@ -550,16 +550,21 @@ def reset():
     flash('Database berhasil dibersihkan!', 'warning')
     return redirect(url_for('index'))
 
-if __name__ == '__main__':
-    # Pastikan direktori templates ada
-    os.makedirs('templates', exist_ok=True)
-    init_db()
-    # Muat default data jika database masih kosong
+
+# ==========================================
+# INISIALISASI DATABASE OTOMATIS (Sangat penting untuk Render/Gunicorn)
+# ==========================================
+os.makedirs('templates', exist_ok=True)
+init_db()
+try:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) as count FROM kriteria")
     if cursor.fetchone()['count'] == 0:
         seed_default_data()
     conn.close()
-    
+except Exception as e:
+    print(f"Database Auto-Initialization Warning: {e}")
+
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
