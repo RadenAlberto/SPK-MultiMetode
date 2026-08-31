@@ -3,360 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Pendukung Keputusan (SPK) - MFEP & SAW</title>
+    <title>SPK Engine - MFEP & SAW</title>
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         body { transition: background-color 0.3s, color 0.3s; }
-        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        /* Optimasi mobile font size & spacing */
-        @media (max-width: 576px) {
-            .container { padding-left: 10px; padding-right: 10px; }
-            .card-header { padding: 10px; }
-            .btn-sm { padding: 0.25rem 0.4rem; font-size: 0.75rem; }
-            table { font-size: 0.85rem; }
-        }
+        .card { border-radius: 12px; }
+        .nav-pills .nav-link.active { font-weight: bold; }
     </style>
 </head>
-<body>
+<body class="bg-body-tertiary">
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-    <div class="container">
-        <a class="navbar-brand fw-bold fs-6 fs-md-5" href="#">
-            <i class="fa-solid fa-calculator me-1"></i> SPK Engine
-        </a>
-        <div class="d-flex align-items-center">
-            <!-- Tombol Dark Mode Toggle -->
-            <button class="btn btn-outline-light btn-sm me-2" id="themeToggle" onclick="toggleTheme()">
-                <i class="fa-solid fa-moon" id="themeIcon"></i>
-            </button>
-            <a href="/seed" class="btn btn-outline-info btn-sm me-1"><i class="fa-solid fa-database"></i> <span class="d-none d-md-inline">Seed</span></a>
-            <a href="/reset" class="btn btn-outline-danger btn-sm" onclick="return confirm('Reset DB?')"><i class="fa-solid fa-trash"></i> <span class="d-none d-md-inline">Reset</span></a>
+    <!-- NAVIGASI & HEADER -->
+    <nav class="navbar navbar-expand-lg border-bottom bg-body sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="#">
+                <i class="bi bi-cpu-fill me-2"></i>SPK Engine
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('seed_data') }}" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Isi sampel data?')">
+                    <i class="bi bi-database-add me-1"></i>Seed Data
+                </a>
+                <a href="{{ url_for('reset_data') }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Hapus semua data?')">
+                    <i class="bi bi-trash me-1"></i>Reset
+                </a>
+                <button id="themeToggle" class="btn btn-sm btn-outline-primary ms-2">
+                    <i id="themeIcon" class="bi bi-moon-fill"></i>
+                </button>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
-<div class="container mb-5">
+    <!-- MAIN CONTAINER -->
+    <div class="container my-4">
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+        <!-- NOTIFIKASI FLASH -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <!-- SECTION 1: MANAJEMEN DATA INPUT -->
-    <div class="row g-3 mb-4">
-        <!-- Form Kriteria & Tabel Kriteria -->
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header fw-bold d-flex justify-content-between align-items-center py-3">
-                    <span><i class="fa-solid fa-list-check me-2 text-primary"></i>Kriteria</span>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddKriteria">
-                        <i class="fa-solid fa-plus me-1"></i> Tambah
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Nama</th>
-                                    <th>Bobot</th>
-                                    <th>Tipe</th>
-                                    <th class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for k in kriteria %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td class="fw-semibold">{{ k.nama_kriteria }}</td>
-                                    <td>{{ k.bobot }}</td>
-                                    <td>
-                                        <span class="badge {% if k.tipe == 'Benefit' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                            {{ k.tipe }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#modalEditKriteria{{ k.id }}">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </button>
-                                        <a href="/kriteria/delete/{{ k.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus?')">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </a>
-                                    </td>
-                                </tr>
+        <!-- SECTION 1: KRITERIA & ALTERNATIF -->
+        <div class="row g-4 mb-4">
+            <!-- TABEL KRITERIA -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-body d-flex justify-content-between align-items-center py-3">
+                        <h5 class="card-title mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Data Kriteria</h5>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addKriteriaModal">
+                            <i class="bi bi-plus-lg me-1"></i>Kriteria
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nama Kriteria</th>
+                                        <th>Bobot</th>
+                                        <th>Tipe</th>
+                                        <th class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for k in kriteria_list %}
+                                    <tr>
+                                        <td><strong>{{ k.nama_kriteria }}</strong></td>
+                                        <td>{{ k.bobot }}</td>
+                                        <td>
+                                            <span class="badge {% if k.tipe == 'Benefit' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                                {{ k.tipe }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-info me-1" data-bs-toggle="modal" data-bs-target="#editKriteriaModal{{ k.id }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form action="{{ url_for('delete_kriteria', id=k.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus kriteria ini?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
 
-                                <!-- Modal Edit Kriteria -->
-                                <div class="modal fade" id="modalEditKriteria{{ k.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <form action="/kriteria/edit/{{ k.id }}" method="POST" class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Edit Kriteria</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <!-- MODAL EDIT KRITERIA -->
+                                    <div class="modal fade" id="editKriteriaModal{{ k.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <form action="{{ url_for('edit_kriteria', id=k.id) }}" method="POST">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Edit Kriteria</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Nama Kriteria</label>
+                                                            <input type="text" name="nama_kriteria" class="form-control" value="{{ k.nama_kriteria }}" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Bobot</label>
+                                                            <input type="number" step="any" name="bobot" class="form-control" value="{{ k.bobot }}" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Tipe Kriteria</label>
+                                                            <select name="tipe" class="form-select" required>
+                                                                <option value="Benefit" {% if k.tipe == 'Benefit' %}selected{% endif %}>Benefit</option>
+                                                                <option value="Cost" {% if k.tipe == 'Cost' %}selected{% endif %}>Cost</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                        <button type="submit" class="btn btn-primary">Simpan</button>
+                                                    </div>
+                                                </form>
                                             </div>
-                                            <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label">Nama Kriteria</label>
-                                                    <input type="text" name="nama_kriteria" class="form-control" value="{{ k.nama_kriteria }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Bobot</label>
-                                                    <input type="number" step="0.01" name="bobot" class="form-control" value="{{ k.bobot }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Tipe Kriteria</label>
-                                                    <select name="tipe" class="form-select">
-                                                        <option value="Benefit" {% if k.tipe == 'Benefit' %}selected{% endif %}>Benefit</option>
-                                                        <option value="Cost" {% if k.tipe == 'Cost' %}selected{% endif %}>Cost</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <button type="submit" class="btn btn-primary">Simpan</button>
-                                            </div>
-                                        </form>
+                                        </div>
                                     </div>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">Belum ada data kriteria.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABEL ALTERNATIF -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-body d-flex justify-content-between align-items-center py-3">
+                        <h5 class="card-title mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>Data Alternatif</h5>
+                        <form action="{{ url_for('add_alternatif') }}" method="POST" class="d-flex gap-2">
+                            <input type="text" name="nama_alternatif" class="form-control form-control-sm" placeholder="Nama Alternatif..." required>
+                            <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="bi bi-plus-lg me-1"></i>Tambah</button>
+                        </form>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama Alternatif</th>
+                                        <th class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for a in alternatif_list %}
+                                    <tr>
+                                        <td>{{ a.id }}</td>
+                                        <td><strong>{{ a.nama_alternatif }}</strong></td>
+                                        <td class="text-center">
+                                            <form action="{{ url_for('delete_alternatif', id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus alternatif ini?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-3">Belum ada data alternatif.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: MATRIKS PENILAIAN -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-body py-3">
+                <h5 class="card-title mb-0 fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Matriks Evaluasi (Rating Nilai)</h5>
+            </div>
+            <div class="card-body">
+                {% if kriteria_list and alternatif_list %}
+                <form action="{{ url_for('update_matrix') }}" method="POST">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Alternatif \ Kriteria</th>
+                                    {% for k in kriteria_list %}
+                                    <th>{{ k.nama_kriteria }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in alternatif_list %}
+                                <tr>
+                                    <td class="fw-bold text-start">{{ a.nama_alternatif }}</td>
+                                    {% for k in kriteria_list %}
+                                    <td>
+                                        <input type="number" step="any" class="form-control text-center" 
+                                               name="rating_{{ a.id }}_{{ k.id }}" 
+                                               value="{{ matrix.get(a.id, {}).get(k.id, 0) }}" required>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i>Simpan Matriks Nilai</button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-muted text-center my-3">Silakan isi data Kriteria dan Alternatif terlebih dahulu.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- SECTION 3: HASIL PERHITUNGAN & RINCIAN STEP-BY-STEP -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-body py-3">
+                <ul class="nav nav-pills card-header-pills" id="methodTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="mfep-tab" data-bs-toggle="tab" data-bs-target="#mfep-pane" type="button" role="tab">
+                            <i class="bi bi-calculator me-1"></i>Metode MFEP
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="saw-tab" data-bs-toggle="tab" data-bs-target="#saw-pane" type="button" role="tab">
+                            <i class="bi bi-bar-chart-steps me-1"></i>Metode SAW
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="methodTabsContent">
+                    
+                    <!-- TAB MFEP -->
+                    <div class="tab-pane fade show active" id="mfep-pane" role="tabpanel">
+                        <h5 class="fw-bold mb-3">Ranking Hasil MFEP</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Nama Alternatif</th>
+                                        <th>Total Skor ($E_i$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in mfep_ranking %}
+                                    <tr>
+                                        <td><strong>#{{ loop.index }}</strong></td>
+                                        <td>{{ r.nama_alternatif }}</td>
+                                        <td><span class="badge bg-primary fs-6">{{ "%.4f"|format(r.total_skor) }}</span></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted">Belum ada data.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ACCORDION DETAIL MFEP -->
+                        <div class="mt-4">
+                            <button class="btn btn-outline-info btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMFEPDetail">
+                                🔍 Lihat Rincian Langkah Perhitungan Matematika MFEP
+                            </button>
+                            <div class="collapse mt-3" id="collapseMFEPDetail">
+                                <div class="card card-body">
+                                    <h6 class="fw-bold">Rincian Perhitungan MFEP</h6>
+                                    <p class="text-muted small">
+                                        <strong>Rumus:</strong> $E_{ij} = X_{ij} \times W_j$ | $E_i = \sum E_{ij}$
+                                    </p>
+
+                                    {% for item in mfep_detail %}
+                                    <div class="border rounded p-3 mb-3">
+                                        <h6 class="fw-bold text-primary">{{ item.nama_alternatif }}</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Kriteria</th>
+                                                        <th>Rating ($X_{ij}$)</th>
+                                                        <th>Bobot Norm ($W_j$)</th>
+                                                        <th>Evaluasi Terbobot ($E_{ij}$)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for d in item.detail %}
+                                                    <tr>
+                                                        <td>{{ d.kriteria }}</td>
+                                                        <td>{{ d.rating }}</td>
+                                                        <td>{{ "%.3f"|format(d.bobot_norm) }}</td>
+                                                        <td>{{ d.rating }} × {{ "%.3f"|format(d.bobot_norm) }} = <strong>{{ "%.4f"|format(d.eval_terbobot) }}</strong></td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="table-info">
+                                                        <th colspan="3" class="text-end">Total Skor Akhir ($E_i$):</th>
+                                                        <th>{{ "%.4f"|format(item.total_skor) }}</th>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">Belum ada data.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Form Alternatif -->
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header fw-bold py-3">
-                    <span><i class="fa-solid fa-users me-2 text-success"></i>Tambah Alternatif & Rating</span>
-                </div>
-                <div class="card-body">
-                    {% if kriteria %}
-                    <form action="/alternatif/add" method="POST">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nama Alternatif Baru</label>
-                            <input type="text" name="nama_alternatif" class="form-control" placeholder="Contoh: Taksi" required>
-                        </div>
-                        <p class="fw-bold mb-2 small">Nilai Evaluasi:</p>
-                        <div class="row g-2 mb-3">
-                            {% for k in kriteria %}
-                            <div class="col-6">
-                                <label class="form-label small text-muted text-truncate w-100">{{ k.nama_kriteria }}</label>
-                                <input type="number" step="0.01" name="kriteria_{{ k.id }}" class="form-control form-control-sm" placeholder="Nilai..." required>
                             </div>
-                            {% endfor %}
                         </div>
-                        <button type="submit" class="btn btn-success w-100"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan</button>
-                    </form>
-                    {% else %}
-                    <div class="alert alert-info mb-0">
-                        Tambahkan Kriteria terlebih dahulu.
                     </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- SECTION 2: MATRIKS EVALUASI -->
-    <div class="card mb-4">
-        <div class="card-header fw-bold py-3">
-            <span><i class="fa-solid fa-table me-2 text-info"></i>Matriks Evaluasi Saat Ini</span>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0 text-center">
-                    <thead>
-                        <tr>
-                            <th>Alternatif</th>
-                            {% for k in kriteria %}
-                            <th>{{ k.nama_kriteria }}</th>
-                            {% endfor %}
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for alt in alternatif %}
-                        <tr>
-                            <td class="fw-bold text-start ps-3">{{ alt.nama_alternatif }}</td>
-                            {% for k in kriteria %}
-                            <td>{{ rating_matrix[alt.id][k.id] }}</td>
-                            {% endfor %}
-                            <td>
-                                <a href="/alternatif/delete/{{ alt.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus?')">
-                                    <i class="fa-solid fa-trash"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="{{ kriteria|length + 2 }}" class="text-muted py-3">Matriks nilai kosong.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+                    <!-- TAB SAW -->
+                    <div class="tab-pane fade" id="saw-pane" role="tabpanel">
+                        <h5 class="fw-bold mb-3">Ranking Hasil SAW</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Nama Alternatif</th>
+                                        <th>Nilai Preferensi ($V_i$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in saw_ranking %}
+                                    <tr>
+                                        <td><strong>#{{ loop.index }}</strong></td>
+                                        <td>{{ r.nama_alternatif }}</td>
+                                        <td><span class="badge bg-success fs-6">{{ "%.4f"|format(r.total_v) }}</span></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted">Belum ada data.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
 
-    <!-- SECTION 3: HASIL KALKULASI -->
-    <div class="card">
-        <div class="card-header py-2">
-            <ul class="nav nav-pills card-header-pills" id="spkTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold btn-sm" id="mfep-tab" data-bs-toggle="pill" data-bs-target="#mfep" type="button" role="tab">
-                        Metode MFEP
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold btn-sm" id="saw-tab" data-bs-toggle="pill" data-bs-target="#saw" type="button" role="tab">
-                        Metode SAW
-                    </button>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body">
-            <div class="tab-content" id="spkTabContent">
-                <!-- HASIL MFEP -->
-                <div class="tab-pane fade show active" id="mfep" role="tabpanel">
-                    <h6 class="fw-bold mb-3 text-primary">Hasil Ranking MFEP</h6>
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered text-center align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Peringkat</th>
-                                    <th>Alternatif</th>
-                                    <th>Skor MFEP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in results_mfep %}
-                                <tr {% if loop.first %}class="table-success fw-bold"{% endif %}>
-                                    <td>#{{ loop.index }}</td>
-                                    <td>{{ r.nama }}</td>
-                                    <td>{{ r.skor }}</td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="3" class="text-muted">Tidak ada data.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <!-- ACCORDION DETAIL SAW -->
+                        <div class="mt-4">
+                            <button class="btn btn-outline-info btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSAWDetail">
+                                🔍 Lihat Rincian Langkah Perhitungan Matematika SAW
+                            </button>
+                            <div class="collapse mt-3" id="collapseSAWDetail">
+                                <div class="card card-body">
+                                    <h6 class="fw-bold">Rincian Perhitungan SAW</h6>
+                                    <p class="text-muted small">
+                                        <strong>Rumus Normalisasi ($R_{ij}$):</strong> Benefit = $X_{ij} / \max(X_j)$ | Cost = $\min(X_j) / X_{ij}$[cite: 3]<br>
+                                        <strong>Rumus Preferensi ($V_i$):</strong> $V_i = \sum (W_j \times R_{ij})$[cite: 3]
+                                    </p>
+
+                                    {% for item in saw_detail %}
+                                    <div class="border rounded p-3 mb-3">
+                                        <h6 class="fw-bold text-success">{{ item.nama_alternatif }}</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Kriteria</th>
+                                                        <th>Tipe</th>
+                                                        <th>Rating ($X_{ij}$)</th>
+                                                        <th>Normalisasi ($R_{ij}$)</th>
+                                                        <th>Bobot Norm ($W_j$)</th>
+                                                        <th>Nilai Terbobot ($V_{ij}$)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for d in item.detail %}
+                                                    <tr>
+                                                        <td>{{ d.kriteria }}</td>
+                                                        <td><span class="badge {% if d.tipe == 'Benefit' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ d.tipe }}</span></td>
+                                                        <td>{{ d.rating }}</td>
+                                                        <td>{{ d.rumus_str }} = <strong>{{ "%.3f"|format(d.r_ij) }}</strong></td>
+                                                        <td>{{ "%.3f"|format(d.bobot_norm) }}</td>
+                                                        <td>{{ "%.3f"|format(d.bobot_norm) }} × {{ "%.3f"|format(d.r_ij) }} = <strong>{{ "%.4f"|format(d.v_ij) }}</strong></td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="table-success">
+                                                        <th colspan="5" class="text-end">Total Nilai Preferensi ($V_i$):</th>
+                                                        <th>{{ "%.4f"|format(item.total_v) }}</th>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- HASIL SAW -->
-                <div class="tab-pane fade" id="saw" role="tabpanel">
-                    <h6 class="fw-bold mb-3 text-primary">Hasil Ranking SAW</h6>
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered text-center align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Peringkat</th>
-                                    <th>Alternatif</th>
-                                    <th>Skor SAW (V)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in results_saw %}
-                                <tr {% if loop.first %}class="table-success fw-bold"{% endif %}>
-                                    <td>#{{ loop.index }}</td>
-                                    <td>{{ r.nama }}</td>
-                                    <td>{{ r.skor }}</td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="3" class="text-muted">Tidak ada data.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL TAMBAH KRITERIA -->
+    <div class="modal fade" id="addKriteriaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('add_kriteria') }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Tambah Kriteria Baru</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Kriteria</label>
+                            <input type="text" name="nama_kriteria" class="form-control" placeholder="Contoh: Harga, Garansi..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Bobot</label>
+                            <input type="number" step="any" name="bobot" class="form-control" placeholder="Contoh: 10, 25..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipe Kriteria</label>
+                            <select name="tipe" class="form-select" required>
+                                <option value="Benefit">Benefit</option>
+                                <option value="Cost">Cost</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-</div>
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script Dark Mode Toggle -->
+    <script>
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const htmlElement = document.documentElement;
 
-<!-- Modal Add Kriteria -->
-<div class="modal fade" id="modalAddKriteria" tabindex="-1">
-    <div class="modal-dialog">
-        <form action="/kriteria/add" method="POST" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Tambah Kriteria</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Nama Kriteria</label>
-                    <input type="text" name="nama_kriteria" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Bobot</label>
-                    <input type="number" step="0.01" name="bobot" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Tipe Kriteria</label>
-                    <select name="tipe" class="form-select">
-                        <option value="Benefit">Benefit</option>
-                        <option value="Cost">Cost</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Bootstrap 5 JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Script Dark Mode Toggle -->
-<script>
-    function toggleTheme() {
-        const html = document.documentElement;
-        const icon = document.getElementById('themeIcon');
-        const currentTheme = html.getAttribute('data-bs-theme');
-        
-        if (currentTheme === 'dark') {
-            html.setAttribute('data-bs-theme', 'light');
-            icon.className = 'fa-solid fa-moon';
-            localStorage.setItem('theme', 'light');
-        } else {
-            html.setAttribute('data-bs-theme', 'dark');
-            icon.className = 'fa-solid fa-sun';
-            localStorage.setItem('theme', 'dark');
-        }
-    }
-
-    // simpan preferensi mode di browser lokal
-    (function() {
+        // Ambil preferensi dari localStorage
         const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', savedTheme);
-        document.addEventListener('DOMContentLoaded', () => {
-            const icon = document.getElementById('themeIcon');
-            if (icon) {
-                icon.className = savedTheme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-            }
+        setTheme(savedTheme);
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
         });
-    })();
-</script>
+
+        function setTheme(theme) {
+            htmlElement.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun-fill';
+            } else {
+                themeIcon.className = 'bi bi-moon-fill';
+            }
+        }
+    </script>
 </body>
 </html>
