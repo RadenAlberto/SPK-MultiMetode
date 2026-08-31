@@ -294,10 +294,6 @@ def index():
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT COUNT(*) as count FROM kriteria")
-    if cursor.fetchone()['count'] == 0:
-        seed_default_data()
         
     cursor.execute("SELECT * FROM kriteria")
     kriteria_list = [dict(row) for row in cursor.fetchall()]
