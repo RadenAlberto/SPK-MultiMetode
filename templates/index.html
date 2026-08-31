@@ -7,15 +7,13 @@
             document.documentElement.setAttribute('data-bs-theme', savedTheme);
         })();
     </script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard SPK Multi-Metode (MFEP, SAW, WP, SMART)</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>SPK Web Engine - MFEP & SAW</title>
+    <!-- Bootstrap 5 CSS & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome untuk Icon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-        <style>
+    <style>
         body {
             background-color: var(--bs-tertiary-bg);
             color: var(--bs-body-color);
@@ -28,7 +26,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
             margin-bottom: 24px;
             background-color: var(--bs-card-bg);
-            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .card-header {
             background-color: var(--bs-tertiary-bg);
@@ -37,7 +34,6 @@
             color: var(--bs-card-cap-color);
             border-top-left-radius: 12px !important;
             border-top-right-radius: 12px !important;
-            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .nav-pills .nav-link {
             border-radius: 8px;
@@ -55,25 +51,10 @@
             color: #198754;
             border: 1px solid rgba(25, 135, 84, 0.3);
         }
-        [data-bs-theme="dark"] .badge-benefit {
-            background-color: rgba(40, 167, 69, 0.25);
-            color: #2ea44f;
-            border: 1px solid rgba(40, 167, 69, 0.4);
-        }
         .badge-cost {
             background-color: rgba(220, 53, 69, 0.15);
             color: #dc3545;
             border: 1px solid rgba(220, 53, 69, 0.3);
-        }
-        [data-bs-theme="dark"] .badge-cost {
-            background-color: rgba(220, 53, 69, 0.25);
-            color: #ff6b6b;
-            border: 1px solid rgba(220, 53, 69, 0.4);
-        }
-        .table th {
-            font-weight: 600;
-            background-color: var(--bs-secondary-bg);
-            color: var(--bs-body-color);
         }
         .ranking-1 {
             background-color: rgba(255, 193, 7, 0.15) !important;
@@ -87,27 +68,27 @@
             border-radius: 4px;
             font-size: 0.9em;
         }
-        /* Mode switch transitions and styles */
-        #theme-toggle {
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
+        .advanced-method {
+            display: none;
         }
-        #theme-toggle:hover {
-            transform: scale(1.05);
+        .advanced-method.show {
+            display: block !important;
+        }
+        .nav-item.advanced-method.show {
+            display: list-item !important;
         }
     </style>
 </head>
 <body>
 
-    <!-- Navbar Atas -->
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fa-solid fa-square-poll-vertical me-2 text-warning"></i>
-                <strong>SPK Web Engine</strong> v2.0 (Expert Edition)
+                <strong>SPK Web Engine</strong> (MFEP &amp; SAW)
             </a>
             <div class="d-flex align-items-center">
-                <!-- Theme Toggle Button -->
                 <button id="theme-toggle" class="btn btn-outline-light btn-sm me-2 d-flex align-items-center" title="Ubah Tema">
                     <i id="theme-icon" class="fa-solid fa-moon"></i>
                     <span id="theme-text" class="ms-1 d-none d-md-inline">Mode Gelap</span>
@@ -116,7 +97,7 @@
                     <i class="fa-solid fa-arrows-spin me-1"></i> Muat Kasus PPT
                 </a>
                 <a href="/reset" class="btn btn-outline-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus semua data?');">
-                    <i class="fa-solid fa-trash-can me-1"></i> Reset Database
+                    <i class="fa-solid fa-trash-can me-1"></i> Reset DB
                 </a>
             </div>
         </div>
@@ -135,27 +116,25 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Temuan Audit Typo PPT Alert -->
+        <!-- Audit Alert -->
         {% if audit_warning %}
             <div class="alert alert-warning border-warning shadow-sm d-flex align-items-center" role="alert">
                 <i class="fa-solid fa-triangle-exclamation fa-2xl me-3 text-warning"></i>
                 <div>
                     <h5 class="alert-heading mb-1">💡 Temuan Audit PPT Terdeteksi!</h5>
-                    <p class="mb-0 small text-dark">
-                        Sistem mendeteksi bahwa Anda sedang menguji <strong>Studi Kasus Transportasi dari PPT (Bis, Angkot, Ojek)</strong>. 
-                        Pada <strong>Slide 8</strong>, terdapat kesalahan ketik manual (typo) pada perkalian kriteria Kepadatan untuk Ojek: 
-                        <code class="text-danger font-weight-bold">9 x 0.25</code> ditulis <code class="text-danger font-weight-bold">2.5</code>, padahal nilai presisinya adalah <code class="text-success font-weight-bold">2.25</code>. 
-                        Aplikasi ini telah **mengoreksi kesalahan tersebut secara otomatis** sehingga seluruh kalkulasi berjalan dengan akurasi 100%!
+                    <p class="mb-0 small">
+                        Sistem mendeteksi Studi Kasus Transportasi dari PPT (Bis, Angkot, Ojek). 
+                        Pada <strong>Slide 8</strong>, terdapat salah ketik pada Ojek Kepadatan: 
+                        <code>9 x 0.25</code> ditulis <code>2.5</code> (nilai presisi adalah <code>2.25</code>). 
+                        Aplikasi telah mengoreksi nilai tersebut otomatis.
                     </p>
                 </div>
             </div>
         {% endif %}
 
         <div class="row">
-            <!-- PANEL KIRI: MANAJEMEN KRITERIA & INPUT ALTERNATIF -->
+            <!-- PANEL KIRI: KRITERIA & ALTERNATIF -->
             <div class="col-lg-4">
-                
-                <!-- 1. Kelola Kriteria -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fa-solid fa-sliders me-2 text-primary"></i>1. Kelola Kriteria</span>
@@ -189,20 +168,20 @@
                                                 <button class="btn btn-light btn-sm text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditKriteria{{ k.id }}">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
-                                                <a href="/kriteria/delete/{{ k.id }}" class="btn btn-light btn-sm text-danger" onclick="return confirm('Hapus kriteria ini? Semua nilai alternatif untuk kriteria ini akan ikut terhapus!');">
+                                                <a href="/kriteria/delete/{{ k.id }}" class="btn btn-light btn-sm text-danger" onclick="return confirm('Hapus kriteria ini?');">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </a>
                                             </td>
                                         </tr>
 
-                                        <!-- Modal Edit Kriteria -->
+                                        <!-- Modal Edit -->
                                         <div class="modal fade" id="modalEditKriteria{{ k.id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <form action="/kriteria/edit/{{ k.id }}" method="POST">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
                                                             <h5 class="modal-title">Edit Kriteria: {{ k.nama_kriteria }}</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                         </div>
                                                         <div class="modal-body">
                                                             <div class="mb-3">
@@ -210,20 +189,20 @@
                                                                 <input type="text" class="form-control" name="nama_kriteria" value="{{ k.nama_kriteria }}" required>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label">Bobot Asal (Sistem akan menormalisasi otomatis)</label>
+                                                                <label class="form-label">Bobot Asal</label>
                                                                 <input type="number" class="form-control" name="bobot" step="0.01" value="{{ k.bobot }}" required>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label">Tipe Kriteria</label>
+                                                                <label class="form-label">Tipe</label>
                                                                 <select class="form-select" name="tipe">
-                                                                    <option value="Benefit" {{ 'selected' if k.tipe == 'Benefit' }}>Benefit (Menguntungkan jika besar)</option>
-                                                                    <option value="Cost" {{ 'selected' if k.tipe == 'Cost' }}>Cost (Menguntungkan jika kecil)</option>
+                                                                    <option value="Benefit" {{ 'selected' if k.tipe == 'Benefit' }}>Benefit (Keuntungan)</option>
+                                                                    <option value="Cost" {{ 'selected' if k.tipe == 'Cost' }}>Cost (Biaya)</option>
                                                                 </select>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                            <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                                            <button type="submit" class="btn btn-primary">Simpan</button>
                                                         </div>
                                                     </div>
                                                 </form>
@@ -232,7 +211,7 @@
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted py-3">Belum ada kriteria. Klik '+' untuk menambah.</td>
+                                            <td colspan="4" class="text-center text-muted py-3">Belum ada kriteria.</td>
                                         </tr>
                                     {% endif %}
                                 </tbody>
@@ -241,59 +220,55 @@
                     </div>
                 </div>
 
-                <!-- 2. Form Tambah Alternatif Baru (Dinamis Berdasarkan Kriteria Aktif) -->
+                <!-- Tambah Alternatif -->
                 <div class="card">
                     <div class="card-header">
-                        <i class="fa-solid fa-folder-plus me-2 text-success"></i>2. Tambah Alternatif & Nilai
+                        <i class="fa-solid fa-folder-plus me-2 text-success"></i>2. Tambah Alternatif &amp; Nilai
                     </div>
                     <div class="card-body">
                         {% if not kriteria %}
                             <div class="text-center text-muted py-3">
-                                <p class="mb-0">Harap tambahkan kriteria terlebih dahulu sebelum memasukkan alternatif.</p>
+                                <p class="mb-0">Tambahkan kriteria terlebih dahulu.</p>
                             </div>
                         {% else %}
                             <form action="/alternatif/add" method="POST">
                                 <div class="mb-3">
-                                    <label class="form-label font-weight-bold">Nama Alternatif</label>
-                                    <input type="text" class="form-control" name="nama_alternatif" required placeholder="Contoh: Bis, Angkot, Karyawan A">
+                                    <label class="form-label">Nama Alternatif</label>
+                                    <input type="text" class="form-control" name="nama_alternatif" required placeholder="Contoh: Bis, Angkot, Ojek">
                                 </div>
                                 <hr>
-                                <p class="text-muted small mb-3">Masukkan nilai evaluasi faktor untuk masing-masing kriteria:</p>
-                                
+                                <p class="text-muted small mb-3">Nilai evaluasi kriteria:</p>
                                 {% for k in kriteria %}
                                 <div class="mb-3">
                                     <label class="form-label d-flex justify-content-between">
                                         <span>{{ k.nama_kriteria }}</span>
                                         <span class="small text-muted">({{ k.tipe }})</span>
                                     </label>
-                                    <input type="number" class="form-control" name="kriteria_{{ k.id }}" step="0.1" required placeholder="Masukkan angka">
+                                    <input type="number" class="form-control" name="kriteria_{{ k.id }}" step="0.1" required placeholder="Nilai angka">
                                 </div>
                                 {% endfor %}
-                                
                                 <button type="submit" class="btn btn-success w-100 mt-2">
-                                    <i class="fa-solid fa-calculator me-1"></i> Hitung & Simpan Alternatif
+                                    <i class="fa-solid fa-calculator me-1"></i> Simpan &amp; Hitung
                                 </button>
                             </form>
                         {% endif %}
                     </div>
                 </div>
-
             </div>
 
-            <!-- PANEL KANAN: MATRIKS KEPUTUSAN & METODE SPK -->
+            <!-- PANEL KANAN: MATRIKS & HASIL SPK -->
             <div class="col-lg-8">
-                
-                <!-- A. Matriks Keputusan Utama -->
+                <!-- Matriks Keputusan -->
                 <div class="card">
-                    <div class="card-header bg-white">
-                        <i class="fa-solid fa-table me-2 text-dark"></i>Matriks Keputusan (X) Terdaftar
+                    <div class="card-header">
+                        <i class="fa-solid fa-table me-2"></i>Matriks Keputusan (X) Terdaftar
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-3">Nama Alternatif</th>
+                                        <th class="ps-3">Alternatif</th>
                                         {% for k in kriteria %}
                                         <th class="text-center">{{ k.nama_kriteria }}</th>
                                         {% endfor %}
@@ -317,9 +292,7 @@
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="{{ kriteria|length + 2 }}" class="text-center text-muted py-4">
-                                                Belum ada data alternatif. Masukkan data di panel kiri atau muat default kasus PPT!
-                                            </td>
+                                            <td colspan="{{ kriteria|length + 2 }}" class="text-center text-muted py-4">Belum ada alternatif.</td>
                                         </tr>
                                     {% endif %}
                                 </tbody>
@@ -328,67 +301,73 @@
                     </div>
                 </div>
 
-                <!-- B. Hasil Analisis Multi-Metode -->
+                <!-- Perankingan Multi-Metode -->
                 <div class="card">
-                    <div class="card-header">
-                        <i class="fa-solid fa-ranking-star me-2 text-warning"></i>Hasil Perankingan Multi-Metode
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <i class="fa-solid fa-ranking-star me-2 text-warning"></i>Hasil Perankingan SPK
+                        </div>
+                        <!-- Tombol Toggle WP & SMART -->
+                        <button id="btn-toggle-advanced" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                            <i id="icon-advanced" class="fa-solid fa-eye"></i>
+                            <span id="text-advanced">Tampilkan WP &amp; SMART</span>
+                        </button>
                     </div>
                     <div class="card-body">
-                        <!-- Tab Navigation -->
                         <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="pills-mfep-tab" data-bs-toggle="pill" data-bs-target="#pills-mfep" type="button" role="tab">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="pills-mfep-tab" data-bs-toggle="pill" data-bs-target="#pills-mfep" type="button">
                                     <i class="fa-solid fa-table-list me-1"></i> MFEP
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="pills-saw-tab" data-bs-toggle="pill" data-bs-target="#pills-saw" type="button" role="tab">
+                            <li class="nav-item">
+                                <button class="nav-link" id="pills-saw-tab" data-bs-toggle="pill" data-bs-target="#pills-saw" type="button">
                                     <i class="fa-solid fa-percent me-1"></i> SAW
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="pills-wp-tab" data-bs-toggle="pill" data-bs-target="#pills-wp" type="button" role="tab">
+                            <!-- Tab WP (Bisa di-hide) -->
+                            <li class="nav-item advanced-method">
+                                <button class="nav-link" id="pills-wp-tab" data-bs-toggle="pill" data-bs-target="#pills-wp" type="button">
                                     <i class="fa-solid fa-box-open me-1"></i> WP
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="pills-smart-tab" data-bs-toggle="pill" data-bs-target="#pills-smart" type="button" role="tab">
+                            <!-- Tab SMART (Bisa di-hide) -->
+                            <li class="nav-item advanced-method">
+                                <button class="nav-link" id="pills-smart-tab" data-bs-toggle="pill" data-bs-target="#pills-smart" type="button">
                                     <i class="fa-solid fa-brain me-1"></i> SMART
                                 </button>
                             </li>
                         </ul>
 
                         <div class="tab-content" id="pills-tabContent">
-                            
                             <!-- TAB 1: MFEP -->
                             <div class="tab-pane fade show active" id="pills-mfep" role="tabpanel">
-                                <div class="bg-light p-3 rounded mb-3">
+                                <div class="bg-body-secondary p-3 rounded mb-3">
                                     <h6><strong>Metode MFEP (Multifactor Evaluation Process)</strong></h6>
                                     <p class="small text-muted mb-0">
-                                        Pengambilan keputusan dilakukan dengan memberikan pertimbangan subjektif atas faktor penting. 
-                                        Rumus: <span class="text-formula">Nbe = Nbf x Nef</span>. Total Nilai <span class="text-formula">Tne = &Sigma; Nbe</span>.
+                                        Perhitungan evaluasi faktor terbobot: <span class="text-formula">Nbe = Nbf x Nef</span>. Total Nilai <span class="text-formula">Tne = &Sigma; Nbe</span>.
                                     </p>
                                 </div>
-
-<div class="table-responsive">                                <table class="table table-hover align-middle">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Rank</th>
-                                            <th>Alternatif</th>
-                                            <th class="text-end">Total Skor Akhir</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in results_mfep %}
-                                        <tr class="{{ 'ranking-1' if loop.index == 1 }}">
-                                            <td><strong>#{{ loop.index }}</strong></td>
-                                            <td><strong>{{ row.nama }}</strong></td>
-                                            <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table></div>
-
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Alternatif</th>
+                                                <th class="text-end">Total Skor Akhir</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in results_mfep %}
+                                            <tr class="{{ 'ranking-1' if loop.index == 1 }}">
+                                                <td><strong>#{{ loop.index }}</strong></td>
+                                                <td><strong>{{ row.nama }}</strong></td>
+                                                <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
                                 <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Perhitungan MFEP:</h6>
                                 <div class="accordion" id="accordionMFEP">
                                     {% for alt_name, steps in steps_mfep.items() %}
@@ -399,9 +378,8 @@
                                             </button>
                                         </h2>
                                         <div id="collapseMFEP{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionMFEP">
-                                            <div class="accordion-body">
-                                                <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
+                                            <div class="accordion-body p-2">
+                                                <table class="table table-sm table-bordered mb-0">
                                                     <thead>
                                                         <tr>
                                                             <th>Kriteria</th>
@@ -421,7 +399,6 @@
                                                         {% endfor %}
                                                     </tbody>
                                                 </table>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -431,35 +408,33 @@
 
                             <!-- TAB 2: SAW -->
                             <div class="tab-pane fade" id="pills-saw" role="tabpanel">
-                                <div class="bg-light p-3 rounded mb-3">
+                                <div class="bg-body-secondary p-3 rounded mb-3">
                                     <h6><strong>Metode SAW (Simple Additive Weighting)</strong></h6>
                                     <p class="small text-muted mb-0">
-                                        Metode penjumlahan terbobot dengan normalisasi matriks keputusan. 
-                                        Benefit: <span class="text-formula">r_ij = x_ij / max(x_j)</span>. 
-                                        Cost: <span class="text-formula">r_ij = min(x_j) / x_ij</span>.
+                                        Normalisasi matriks: Benefit (<span class="text-formula">x_ij / max</span>) dan Cost (<span class="text-formula">min / x_ij</span>).
                                     </p>
                                 </div>
-
-<div class="table-responsive">                                <table class="table table-hover align-middle">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Rank</th>
-                                            <th>Alternatif</th>
-                                            <th class="text-end">Total Nilai Preferensi (V)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in results_saw %}
-                                        <tr class="{{ 'ranking-1' if loop.index == 1 }}">
-                                            <td><strong>#{{ loop.index }}</strong></td>
-                                            <td><strong>{{ row.nama }}</strong></td>
-                                            <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table></div>
-
-                                <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Normalisasi & Perkalian SAW:</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Alternatif</th>
+                                                <th class="text-end">Nilai Preferensi (V)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in results_saw %}
+                                            <tr class="{{ 'ranking-1' if loop.index == 1 }}">
+                                                <td><strong>#{{ loop.index }}</strong></td>
+                                                <td><strong>{{ row.nama }}</strong></td>
+                                                <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Normalisasi SAW:</h6>
                                 <div class="accordion" id="accordionSAW">
                                     {% for alt_name, steps in steps_saw.items() %}
                                     <div class="accordion-item">
@@ -469,15 +444,14 @@
                                             </button>
                                         </h2>
                                         <div id="collapseSAW{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionSAW">
-                                            <div class="accordion-body">
-                                                <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
+                                            <div class="accordion-body p-2">
+                                                <table class="table table-sm table-bordered mb-0">
                                                     <thead>
                                                         <tr>
-                                                            <th>Kriteria (Tipe)</th>
-                                                            <th>Nilai Mentah (X)</th>
+                                                            <th>Kriteria</th>
+                                                            <th>Nilai Mentah</th>
                                                             <th>Normalisasi (R)</th>
-                                                            <th>Bobot Normalisasi (W)</th>
+                                                            <th>Bobot (W)</th>
                                                             <th>Hasil Kali (R x W)</th>
                                                         </tr>
                                                     </thead>
@@ -493,7 +467,6 @@
                                                         {% endfor %}
                                                     </tbody>
                                                 </table>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -503,150 +476,63 @@
 
                             <!-- TAB 3: WP -->
                             <div class="tab-pane fade" id="pills-wp" role="tabpanel">
-                                <div class="bg-light p-3 rounded mb-3">
+                                <div class="bg-body-secondary p-3 rounded mb-3">
                                     <h6><strong>Metode WP (Weighted Product)</strong></h6>
                                     <p class="small text-muted mb-0">
-                                        Menggunakan perkalian untuk menghubungkan rating atribut, di mana bobot kriteria berfungsi sebagai pangkat. 
-                                        Bobot pangkat positif untuk Benefit dan negatif untuk Cost. 
-                                        Rumus: <span class="text-formula">S_i = &Pi; x_ij ^ w_j</span>. 
-                                        Perankingan: <span class="text-formula">V_i = S_i / &Sigma; S_k</span>.
+                                        Perkalian dengan bobot sebagai pangkat: <span class="text-formula">S_i = &Pi; x_ij ^ w_j</span>.
                                     </p>
                                 </div>
-
-<div class="table-responsive">                                <table class="table table-hover align-middle">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Rank</th>
-                                            <th>Alternatif</th>
-                                            <th>Nilai Vektor S</th>
-                                            <th class="text-end">Vektor V (Skor Akhir)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in results_wp %}
-                                        <tr class="{{ 'ranking-1' if loop.index == 1 }}">
-                                            <td><strong>#{{ loop.index }}</strong></td>
-                                            <td><strong>{{ row.nama }}</strong></td>
-                                            <td>{{ row.S_value }}</td>
-                                            <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table></div>
-
-                                <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Perpangkatan WP:</h6>
-                                <div class="accordion" id="accordionWP">
-                                    {% for alt_name, steps_data in steps_wp.items() %}
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWP{{ loop.index }}">
-                                                Detail Perhitungan: {{ alt_name }} (S = {{ steps_data.S_value|round(4) }})
-                                            </button>
-                                        </h2>
-                                        <div id="collapseWP{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionWP">
-                                            <div class="accordion-body">
-                                                <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Kriteria (Tipe)</th>
-                                                            <th>Nilai Mentah (X)</th>
-                                                            <th>Pangkat Bobot (W)</th>
-                                                            <th>Hasil Pangkat (X^W)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for s in steps_data.details %}
-                                                        <tr>
-                                                            <td>{{ s.kriteria }} ({{ s.tipe }})</td>
-                                                            <td>{{ s.nilai_mentah }}</td>
-                                                            <td>{{ s.bobot_pangkat|round(4) }}</td>
-                                                            <td>{{ s.hasil_pangkat|round(4) }}</td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Alternatif</th>
+                                                <th>Nilai S</th>
+                                                <th class="text-end">Vektor V</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in results_wp %}
+                                            <tr class="{{ 'ranking-1' if loop.index == 1 }}">
+                                                <td><strong>#{{ loop.index }}</strong></td>
+                                                <td><strong>{{ row.nama }}</strong></td>
+                                                <td>{{ row.S_value }}</td>
+                                                <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
                             <!-- TAB 4: SMART -->
                             <div class="tab-pane fade" id="pills-smart" role="tabpanel">
-                                <div class="bg-light p-3 rounded mb-3">
+                                <div class="bg-body-secondary p-3 rounded mb-3">
                                     <h6><strong>Metode SMART (Simple Multi-Attribute Rating Technique)</strong></h6>
                                     <p class="small text-muted mb-0">
-                                        Mengkonversi nilai mentah menjadi nilai utility berskala 0 - 100 berdasarkan ekstremum kriteria.
-                                        Benefit Utility: <span class="text-formula">u = 100 x (Cout - Cmin) / (Cmax - Cmin)</span>. 
-                                        Cost Utility: <span class="text-formula">u = 100 x (Cmax - Cout) / (Cmax - Cmin)</span>.
+                                        Konversi nilai menjadi utilitas 0 - 100 berdasarkan nilai ekstremum.
                                     </p>
                                 </div>
-
-<div class="table-responsive">                                <table class="table table-hover align-middle">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Rank</th>
-                                            <th>Alternatif</th>
-                                            <th class="text-end">Skor Akhir (Utility Terbobot)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for row in results_smart %}
-                                        <tr class="{{ 'ranking-1' if loop.index == 1 }}">
-                                            <td><strong>#{{ loop.index }}</strong></td>
-                                            <td><strong>{{ row.nama }}</strong></td>
-                                            <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table></div>
-
-                                <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Transformasi Utility SMART:</h6>
-                                <div class="accordion" id="accordionSMART">
-                                    {% for alt_name, steps in steps_smart.items() %}
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSMART{{ loop.index }}">
-                                                Detail Perhitungan: {{ alt_name }}
-                                            </button>
-                                        </h2>
-                                        <div id="collapseSMART{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionSMART">
-                                            <div class="accordion-body">
-                                                <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Kriteria</th>
-                                                            <th>Nilai Mentah</th>
-                                                            <th>C Min</th>
-                                                            <th>C Max</th>
-                                                            <th>Nilai Utility</th>
-                                                            <th>Bobot</th>
-                                                            <th>Hasil Kali</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for s in steps %}
-                                                        <tr>
-                                                            <td>{{ s.kriteria }}</td>
-                                                            <td>{{ s.nilai_mentah }}</td>
-                                                            <td>{{ s.c_min }}</td>
-                                                            <td>{{ s.c_max }}</td>
-                                                            <td><span class="badge bg-secondary">{{ s.utility }}</span></td>
-                                                            <td>{{ s.bobot|round(4) }}</td>
-                                                            <td>{{ s.hasil_kali|round(4) }}</td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Alternatif</th>
+                                                <th class="text-end">Utilitas Terbobot</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in results_smart %}
+                                            <tr class="{{ 'ranking-1' if loop.index == 1 }}">
+                                                <td><strong>#{{ loop.index }}</strong></td>
+                                                <td><strong>{{ row.nama }}</strong></td>
+                                                <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
@@ -665,47 +551,41 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title"><i class="fa-solid fa-plus me-2 text-primary"></i>Tambah Kriteria Baru</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nama Kriteria</label>
-                            <input type="text" class="form-control" name="nama_kriteria" placeholder="Contoh: Ongkos, Nilai Prestasi" required>
+                            <input type="text" class="form-control" name="nama_kriteria" placeholder="Contoh: Ongkos, Kenyamanan" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Bobot Kriteria (Misal: 0.25 atau 25)</label>
-                            <input type="number" class="form-control" name="bobot" step="0.01" placeholder="Masukkan bobot angka" required>
+                            <label class="form-label">Bobot Kriteria</label>
+                            <input type="number" class="form-control" name="bobot" step="0.01" placeholder="Misal: 0.25 atau 25" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Tipe Kriteria</label>
                             <select class="form-select" name="tipe">
-                                <option value="Benefit" selected>Benefit (Kriteria Keuntungan - Semakin tinggi nilai semakin bagus)</option>
-                                <option value="Cost">Cost (Kriteria Biaya - Semakin rendah nilai semakin bagus)</option>
+                                <option value="Benefit" selected>Benefit (Keuntungan)</option>
+                                <option value="Cost">Cost (Biaya)</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary">Simpan Kriteria</button>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-4 mt-5">
-        <div class="container">
-            <p class="mb-1"><strong>Sistem Pendukung Keputusan Multi-Metode</strong> - Didesain khusus untuk Pembelajaran Akademik</p>
-            <p class="small text-muted mb-0">&copy; 2026. Dikembangkan secara mandiri menggunakan Flask, SQLite, dan Bootstrap 5.</p>
-        </div>
-    </footer>
-
-    <!-- Bootstrap 5 JS Bundle (with Popper) -->
+    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Theme Switcher Script -->
+
+    <!-- Theme & Method Visibility Toggle Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 1. Theme Switcher
             const themeToggleBtn = document.getElementById('theme-toggle');
             const themeIcon = document.getElementById('theme-icon');
             const themeText = document.getElementById('theme-text');
@@ -713,8 +593,6 @@
             function applyTheme(theme) {
                 document.documentElement.setAttribute('data-bs-theme', theme);
                 localStorage.setItem('theme', theme);
-                
-                // Update button UI
                 if (theme === 'dark') {
                     themeIcon.className = 'fa-solid fa-sun text-warning';
                     themeText.textContent = 'Mode Terang';
@@ -723,18 +601,57 @@
                     themeText.textContent = 'Mode Gelap';
                 }
             }
-
-            // Init from localStorage
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            applyTheme(savedTheme);
+            applyTheme(localStorage.getItem('theme') || 'light');
 
             themeToggleBtn.addEventListener('click', function() {
                 const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                applyTheme(newTheme);
+                applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            });
+
+            // 2. Hide / Show WP & SMART Toggle
+            const toggleAdvancedBtn = document.getElementById('btn-toggle-advanced');
+            const iconAdvanced = document.getElementById('icon-advanced');
+            const textAdvanced = document.getElementById('text-advanced');
+            const advancedElements = document.querySelectorAll('.advanced-method');
+
+            function applyAdvancedVisibility(show) {
+                localStorage.setItem('spk_show_advanced', show ? 'true' : 'false');
+                advancedElements.forEach(el => {
+                    if (show) {
+                        el.classList.add('show');
+                    } else {
+                        el.classList.remove('show');
+                    }
+                });
+
+                if (show) {
+                    toggleAdvancedBtn.className = 'btn btn-outline-secondary btn-sm d-flex align-items-center gap-1';
+                    iconAdvanced.className = 'fa-solid fa-eye-slash';
+                    textAdvanced.textContent = 'Sembunyikan WP & SMART';
+                } else {
+                    toggleAdvancedBtn.className = 'btn btn-outline-primary btn-sm d-flex align-items-center gap-1';
+                    iconAdvanced.className = 'fa-solid fa-eye';
+                    textAdvanced.textContent = 'Tampilkan WP & SMART';
+                    
+                    // Kembalikan ke tab MFEP jika sedang membuka tab WP/SMART saat di-hide
+                    const activeTabBtn = document.querySelector('#pills-tab .nav-link.active');
+                    if (activeTabBtn && (activeTabBtn.id === 'pills-wp-tab' || activeTabBtn.id === 'pills-smart-tab')) {
+                        const mfepTabBtn = document.getElementById('pills-mfep-tab');
+                        const bootstrapTab = new bootstrap.Tab(mfepTabBtn);
+                        bootstrapTab.show();
+                    }
+                }
+            }
+
+            // Default: false (tersembunyi)
+            const isAdvancedSaved = localStorage.getItem('spk_show_advanced') === 'true';
+            applyAdvancedVisibility(isAdvancedSaved);
+
+            toggleAdvancedBtn.addEventListener('click', function() {
+                const currentShow = localStorage.getItem('spk_show_advanced') === 'true';
+                applyAdvancedVisibility(!currentShow);
             });
         });
     </script>
-
 </body>
 </html>
