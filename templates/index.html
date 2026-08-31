@@ -9,8 +9,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPK Web Engine - MFEP & SAW</title>
-    <!-- Bootstrap 5 CSS & FontAwesome -->
+    <title>SPK Web Engine - Multi Metode</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -86,7 +85,7 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fa-solid fa-square-poll-vertical me-2 text-warning"></i>
-                <strong>SPK Web Engine</strong> (MFEP &amp; SAW)
+                <strong>SPK Web Engine</strong> (Multi-Metode)
             </a>
             <div class="d-flex align-items-center">
                 <button id="theme-toggle" class="btn btn-outline-light btn-sm me-2 d-flex align-items-center" title="Ubah Tema">
@@ -126,7 +125,7 @@
                         Sistem mendeteksi Studi Kasus Transportasi dari PPT (Bis, Angkot, Ojek). 
                         Pada <strong>Slide 8</strong>, terdapat salah ketik pada Ojek Kepadatan: 
                         <code>9 x 0.25</code> ditulis <code>2.5</code> (nilai presisi adalah <code>2.25</code>). 
-                        Aplikasi telah mengoreksi nilai tersebut otomatis.
+                        Aplikasi telah mengoreksi nilai tersebut secara otomatis.
                     </p>
                 </div>
             </div>
@@ -158,7 +157,7 @@
                                         {% for k in kriteria %}
                                         <tr>
                                             <td class="ps-3"><strong>{{ k.nama_kriteria }}</strong></td>
-                                            <td>{{ k.bobot }}</td>
+                                            <td>{{ k.bobot_asal }}</td>
                                             <td>
                                                 <span class="badge {{ 'badge-benefit' if k.tipe == 'Benefit' else 'badge-cost' }}">
                                                     {{ k.tipe }}
@@ -190,7 +189,7 @@
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Bobot Asal</label>
-                                                                <input type="number" class="form-control" name="bobot" step="0.01" value="{{ k.bobot }}" required>
+                                                                <input type="number" class="form-control" name="bobot" step="0.01" value="{{ k.bobot_asal }}" required>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Tipe</label>
@@ -307,7 +306,6 @@
                         <div>
                             <i class="fa-solid fa-ranking-star me-2 text-warning"></i>Hasil Perankingan SPK
                         </div>
-                        <!-- Tombol Toggle WP & SMART -->
                         <button id="btn-toggle-advanced" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
                             <i id="icon-advanced" class="fa-solid fa-eye"></i>
                             <span id="text-advanced">Tampilkan WP &amp; SMART</span>
@@ -325,13 +323,11 @@
                                     <i class="fa-solid fa-percent me-1"></i> SAW
                                 </button>
                             </li>
-                            <!-- Tab WP (Bisa di-hide) -->
                             <li class="nav-item advanced-method">
                                 <button class="nav-link" id="pills-wp-tab" data-bs-toggle="pill" data-bs-target="#pills-wp" type="button">
                                     <i class="fa-solid fa-box-open me-1"></i> WP
                                 </button>
                             </li>
-                            <!-- Tab SMART (Bisa di-hide) -->
                             <li class="nav-item advanced-method">
                                 <button class="nav-link" id="pills-smart-tab" data-bs-toggle="pill" data-bs-target="#pills-smart" type="button">
                                     <i class="fa-solid fa-brain me-1"></i> SMART
@@ -579,13 +575,12 @@
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Theme & Method Visibility Toggle Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 1. Theme Switcher
+            // Theme Switcher
             const themeToggleBtn = document.getElementById('theme-toggle');
             const themeIcon = document.getElementById('theme-icon');
             const themeText = document.getElementById('theme-text');
@@ -608,7 +603,7 @@
                 applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
             });
 
-            // 2. Hide / Show WP & SMART Toggle
+            // Toggle WP & SMART
             const toggleAdvancedBtn = document.getElementById('btn-toggle-advanced');
             const iconAdvanced = document.getElementById('icon-advanced');
             const textAdvanced = document.getElementById('text-advanced');
@@ -633,7 +628,6 @@
                     iconAdvanced.className = 'fa-solid fa-eye';
                     textAdvanced.textContent = 'Tampilkan WP & SMART';
                     
-                    // Kembalikan ke tab MFEP jika sedang membuka tab WP/SMART saat di-hide
                     const activeTabBtn = document.querySelector('#pills-tab .nav-link.active');
                     if (activeTabBtn && (activeTabBtn.id === 'pills-wp-tab' || activeTabBtn.id === 'pills-smart-tab')) {
                         const mfepTabBtn = document.getElementById('pills-mfep-tab');
@@ -643,7 +637,6 @@
                 }
             }
 
-            // Default: false (tersembunyi)
             const isAdvancedSaved = localStorage.getItem('spk_show_advanced') === 'true';
             applyAdvancedVisibility(isAdvancedSaved);
 

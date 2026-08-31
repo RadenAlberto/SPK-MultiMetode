@@ -8,14 +8,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_spk_app_2026')
 
-# Ambil DATABASE_URL dari Environment Render
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db_connection():
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL belum dikonfigurasi di Environment Render!")
     
-    # Fix URL prefix jika berformat postgres://
     db_url = DATABASE_URL
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
