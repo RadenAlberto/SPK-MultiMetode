@@ -1,5 +1,5 @@
 import os
-import sqlite3
+import psycopg2
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
