@@ -410,23 +410,24 @@ def index():
         
     conn.close()
 
-    # Jalankan DSS Engine untuk mendapatkan hasil perankingan dan langkah-langkah
+    # Jalankan DSS Engine HANYA untuk MFEP dan SAW
     engine = DSS_Engine()
     results_mfep, steps_mfep = engine.run_mfep()
     results_saw, steps_saw = engine.run_saw()
-    results_wp, steps_wp = engine.run_wp()
-    results_smart, steps_smart = engine.run_smart()
+    
+    # [DISABLED] Metode WP dan SMART dinonaktifkan sementara (belum dipelajari)
+    # results_wp, steps_wp = engine.run_wp()
+    # results_smart, steps_smart = engine.run_smart()
 
     # DETEKSI AUDIT & TYPO (Khusus Studi Kasus Default)
-    # Typo PPT: Ojek pada Kepadatan (nilai 9, bobot 0.25) ditulis 2.5 (harusnya 2.25)
     audit_warning = False
     if len(alternatif_list) == 3 and len(kriteria_list) == 4:
-        # Cek apakah alternatifnya adalah Bis, Angkot, Ojek
         alt_names = sorted([a['nama_alternatif'].lower() for a in alternatif_list])
         krit_names = sorted([k['nama_kriteria'].lower() for k in kriteria_list])
         if alt_names == ['angkot', 'bis', 'ojek'] and 'kepadatan' in krit_names:
             audit_warning = True
 
+    # Return render_template hanya mengirim MFEP dan SAW
     return render_template(
         'index.html',
         kriteria=kriteria_list,
@@ -434,8 +435,6 @@ def index():
         rating_matrix=rating_matrix,
         results_mfep=results_mfep, steps_mfep=steps_mfep,
         results_saw=results_saw, steps_saw=steps_saw,
-        results_wp=results_wp, steps_wp=steps_wp,
-        results_smart=results_smart, steps_smart=steps_smart,
         audit_warning=audit_warning
     )
 
