@@ -1,55 +1,68 @@
 import os
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'spk_master.db')
 
 app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
-app.secret_key = 'super_secret_key_for_spk_app'
+app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_spk_app_2026')
+
+# Ambil DATABASE_URL dari Environment Render
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL belum dikonfigurasi di Environment Render!")
+    
+    # Fix URL prefix jika berformat postgres://
+    db_url = DATABASE_URL
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+    conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
     return conn
 
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS kriteria (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama_kriteria TEXT NOT NULL,
-            bobot REAL NOT NULL,
-            tipe TEXT NOT NULL CHECK(tipe IN ('Benefit', 'Cost'))
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS alternatif (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama_alternatif TEXT NOT NULL UNIQUE
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS nilai_rating (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            alternatif_id INTEGER NOT NULL,
-            kriteria_id INTEGER NOT NULL,
-            nilai_evaluasi REAL NOT NULL,
-            FOREIGN KEY (alternatif_id) REFERENCES alternatif (id) ON DELETE CASCADE,
-            FOREIGN KEY (kriteria_id) REFERENCES kriteria (id) ON DELETE CASCADE,
-            UNIQUE(alternatif_id, kriteria_id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    if not DATABASE_URL:
+        return
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS kriteria (
+                id SERIAL PRIMARY KEY,
+                nama_kriteria VARCHAR(255) NOT NULL,
+                bobot DOUBLE PRECISION NOT NULL,
+                tipe VARCHAR(50) NOT NULL CHECK(tipe IN ('Benefit', 'Cost'))
+            );
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS alternatif (
+                id SERIAL PRIMARY KEY,
+                nama_alternatif VARCHAR(255) NOT NULL UNIQUE
+            );
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS nilai_rating (
+                id SERIAL PRIMARY KEY,
+                alternatif_id INTEGER NOT NULL REFERENCES alternatif (id) ON DELETE CASCADE,
+                kriteria_id INTEGER NOT NULL REFERENCES kriteria (id) ON DELETE CASCADE,
+                nilai_evaluasi DOUBLE PRECISION NOT NULL,
+                UNIQUE(alternatif_id, kriteria_id)
+            );
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"[Init DB Error]: {e}")
 
 def seed_default_data():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM nilai_rating")
-    cursor.execute("DELETE FROM kriteria")
-    cursor.execute("DELETE FROM alternatif")
+    
+    cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
     
     kriteria_data = [
         ('Keamanan', 0.40, 'Benefit'),
@@ -57,17 +70,16 @@ def seed_default_data():
         ('Jalur Macet', 0.15, 'Cost'),
         ('Ongkos', 0.20, 'Cost')
     ]
-    cursor.executemany("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (?, ?, ?)", kriteria_data)
+    cursor.executemany("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (%s, %s, %s)", kriteria_data)
     
     cursor.execute("SELECT id, nama_kriteria FROM kriteria")
     k_ids = {row['nama_kriteria']: row['id'] for row in cursor.fetchall()}
     
     alternatifs = ['Bis', 'Angkot', 'Ojek']
+    alt_ids = {}
     for alt in alternatifs:
-        cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (?)", (alt,))
-    
-    cursor.execute("SELECT id, nama_alternatif FROM alternatif")
-    alt_ids = {row['nama_alternatif']: row['id'] for row in cursor.fetchall()}
+        cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (%s) RETURNING id;", (alt,))
+        alt_ids[alt] = cursor.fetchone()['id']
     
     ratings = [
         (alt_ids['Bis'], k_ids['Keamanan'], 6.0),
@@ -83,8 +95,9 @@ def seed_default_data():
         (alt_ids['Ojek'], k_ids['Jalur Macet'], 9.0),
         (alt_ids['Ojek'], k_ids['Ongkos'], 3.0),
     ]
-    cursor.executemany("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (?, ?, ?)", ratings)
+    cursor.executemany("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s)", ratings)
     conn.commit()
+    cursor.close()
     conn.close()
 
 class DSS_Engine:
@@ -97,8 +110,9 @@ class DSS_Engine:
 
     def _get_kriteria(self):
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM kriteria")
+        cursor.execute("SELECT * FROM kriteria ORDER BY id ASC")
         rows = cursor.fetchall()
+        cursor.close()
         total_bobot = sum([row['bobot'] for row in rows])
         kriteria_list = []
         for r in rows:
@@ -114,13 +128,16 @@ class DSS_Engine:
 
     def _get_alternatif(self):
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM alternatif")
-        return [dict(row) for row in cursor.fetchall()]
+        cursor.execute("SELECT * FROM alternatif ORDER BY id ASC")
+        rows = [dict(row) for row in cursor.fetchall()]
+        cursor.close()
+        return rows
 
     def _get_matrix(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM nilai_rating")
         rows = cursor.fetchall()
+        cursor.close()
         matrix = {}
         for r in rows:
             alt_id = r['alternatif_id']
@@ -291,14 +308,17 @@ class DSS_Engine:
 
 @app.route('/')
 def index():
+    if not DATABASE_URL:
+        return "<h2 style='color:red; text-align:center; margin-top:50px;'>Error: Environment variable DATABASE_URL belum diatur di Render!</h2>", 500
+
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
         
-    cursor.execute("SELECT * FROM kriteria")
+    cursor.execute("SELECT * FROM kriteria ORDER BY id ASC")
     kriteria_list = [dict(row) for row in cursor.fetchall()]
     
-    cursor.execute("SELECT * FROM alternatif")
+    cursor.execute("SELECT * FROM alternatif ORDER BY id ASC")
     alternatif_list = [dict(row) for row in cursor.fetchall()]
     
     cursor.execute('''
@@ -308,14 +328,14 @@ def index():
         JOIN kriteria k ON nr.kriteria_id = k.id
     ''')
     rating_rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
     
     rating_matrix = {}
     for alt in alternatif_list:
         rating_matrix[alt['id']] = {k['id']: '-' for k in kriteria_list}
     for row in rating_rows:
         rating_matrix[row['alternatif_id']][row['kriteria_id']] = row['nilai_evaluasi']
-        
-    conn.close()
 
     engine = DSS_Engine()
     results_mfep, steps_mfep = engine.run_mfep()
@@ -344,70 +364,83 @@ def index():
 
 @app.route('/kriteria/add', methods=['POST'])
 def add_kriteria():
-    nama = request.form['nama_kriteria']
+    nama = request.form['nama_kriteria'].strip()
     bobot = float(request.form['bobot'])
     tipe = request.form['tipe']
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (?, ?, ?)", (nama, bobot, tipe))
-        conn.commit()
-        cursor.execute("SELECT id FROM alternatif")
-        alts = cursor.fetchall()
-        cursor.execute("SELECT id FROM kriteria WHERE nama_kriteria = ?", (nama,))
+        cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (%s, %s, %s) RETURNING id;", (nama, bobot, tipe))
         k_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM alternatif;")
+        alts = cursor.fetchall()
         for alt in alts:
-            cursor.execute("INSERT OR IGNORE INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (?, ?, ?)", (alt['id'], k_id, 0.0))
+            cursor.execute("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s) ON CONFLICT (alternatif_id, kriteria_id) DO NOTHING;", (alt['id'], k_id, 0.0))
         conn.commit()
         flash('Kriteria berhasil ditambahkan!', 'success')
     except Exception as e:
+        conn.rollback()
         flash(f'Gagal menambahkan kriteria: {str(e)}', 'danger')
     finally:
+        cursor.close()
         conn.close()
     return redirect(url_for('index'))
 
 @app.route('/kriteria/edit/<int:id>', methods=['POST'])
 def edit_kriteria(id):
-    nama = request.form['nama_kriteria']
+    nama = request.form['nama_kriteria'].strip()
     bobot = float(request.form['bobot'])
     tipe = request.form['tipe']
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE kriteria SET nama_kriteria = ?, bobot = ?, tipe = ? WHERE id = ?", (nama, bobot, tipe, id))
-    conn.commit()
-    conn.close()
-    flash('Kriteria berhasil diperbarui!', 'success')
+    try:
+        cursor.execute("UPDATE kriteria SET nama_kriteria = %s, bobot = %s, tipe = %s WHERE id = %s;", (nama, bobot, tipe, id))
+        conn.commit()
+        flash('Kriteria berhasil diperbarui!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Gagal memperbarui kriteria: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('index'))
 
 @app.route('/kriteria/delete/<int:id>')
 def delete_kriteria(id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM kriteria WHERE id = ?", (id,))
-    cursor.execute("DELETE FROM nilai_rating WHERE kriteria_id = ?", (id,))
-    conn.commit()
-    conn.close()
-    flash('Kriteria berhasil dihapus!', 'success')
+    try:
+        cursor.execute("DELETE FROM kriteria WHERE id = %s;", (id,))
+        conn.commit()
+        flash('Kriteria berhasil dihapus!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Gagal menghapus kriteria: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('index'))
 
 @app.route('/alternatif/add', methods=['POST'])
 def add_alternatif():
-    nama = request.form['nama_alternatif']
+    nama = request.form['nama_alternatif'].strip()
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (?)", (nama,))
-        alt_id = cursor.lastrowid
-        cursor.execute("SELECT id FROM kriteria")
+        cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (%s) RETURNING id;", (nama,))
+        alt_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM kriteria;")
         kriteria_rows = cursor.fetchall()
         for k in kriteria_rows:
             val = float(request.form.get(f"kriteria_{k['id']}", 0.0))
-            cursor.execute("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (?, ?, ?)", (alt_id, k['id'], val))
+            cursor.execute("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s);", (alt_id, k['id'], val))
         conn.commit()
         flash('Alternatif beserta nilai rating berhasil disimpan!', 'success')
     except Exception as e:
+        conn.rollback()
         flash(f'Gagal menambahkan alternatif: {str(e)}', 'danger')
     finally:
+        cursor.close()
         conn.close()
     return redirect(url_for('index'))
 
@@ -415,32 +448,40 @@ def add_alternatif():
 def delete_alternatif(id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM alternatif WHERE id = ?", (id,))
-    cursor.execute("DELETE FROM nilai_rating WHERE alternatif_id = ?", (id,))
-    conn.commit()
-    conn.close()
-    flash('Alternatif berhasil dihapus!', 'success')
+    try:
+        cursor.execute("DELETE FROM alternatif WHERE id = %s;", (id,))
+        conn.commit()
+        flash('Alternatif berhasil dihapus!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Gagal menghapus alternatif: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('index'))
 
 @app.route('/seed')
 def seed():
-    seed_default_data()
-    flash('Studi kasus default (Transportasi dari PPT) berhasil dimuat!', 'info')
+    try:
+        seed_default_data()
+        flash('Studi kasus default (Transportasi dari PPT) berhasil dimuat!', 'info')
+    except Exception as e:
+        flash(f'Gagal memuat data default: {str(e)}', 'danger')
     return redirect(url_for('index'))
 
 @app.route('/reset')
 def reset():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM nilai_rating")
-    cursor.execute("DELETE FROM kriteria")
-    cursor.execute("DELETE FROM alternatif")
-    conn.commit()
-    conn.close()
-    flash('Database berhasil dibersihkan!', 'warning')
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('Database berhasil dibersihkan!', 'warning')
+    except Exception as e:
+        flash(f'Gagal membersihkan database: {str(e)}', 'danger')
     return redirect(url_for('index'))
-
-init_db()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
