@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,20 +9,31 @@
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 10px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .nav-pills .nav-link.active { background-color: #0d6efd; }
-        .table-hover tbody tr:hover { background-color: #f1f3f5; }
+        body { transition: background-color 0.3s, color 0.3s; }
+        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        /* Optimasi mobile font size & spacing */
+        @media (max-width: 576px) {
+            .container { padding-left: 10px; padding-right: 10px; }
+            .card-header { padding: 10px; }
+            .btn-sm { padding: 0.25rem 0.4rem; font-size: 0.75rem; }
+            table { font-size: 0.85rem; }
+        }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-    <div class="container-fluid container">
-        <a class="navbar-brand fw-bold" href="#"><i class="fa-solid fa-calculator me-2"></i>SPK Engine (MFEP & SAW)</a>
-        <div>
-            <a href="/seed" class="btn btn-outline-info btn-sm me-2"><i class="fa-solid fa-database me-1"></i> Seed Data PPT</a>
-            <a href="/reset" class="btn btn-outline-danger btn-sm" onclick="return confirm('Yakin ingin mengosongkan seluruh database?')"><i class="fa-solid fa-trash me-1"></i> Reset DB</a>
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-6 fs-md-5" href="#">
+            <i class="fa-solid fa-calculator me-1"></i> SPK Engine
+        </a>
+        <div class="d-flex align-items-center">
+            <!-- Tombol Dark Mode Toggle -->
+            <button class="btn btn-outline-light btn-sm me-2" id="themeToggle" onclick="toggleTheme()">
+                <i class="fa-solid fa-moon" id="themeIcon"></i>
+            </button>
+            <a href="/seed" class="btn btn-outline-info btn-sm me-1"><i class="fa-solid fa-database"></i> <span class="d-none d-md-inline">Seed</span></a>
+            <a href="/reset" class="btn btn-outline-danger btn-sm" onclick="return confirm('Reset DB?')"><i class="fa-solid fa-trash"></i> <span class="d-none d-md-inline">Reset</span></a>
         </div>
     </div>
 </nav>
@@ -41,34 +52,25 @@
       {% endif %}
     {% endwith %}
 
-    {% if audit_warning %}
-    <div class="alert alert-warning d-flex align-items-center" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2 fs-4"></i>
-        <div>
-            <strong>Mode Audit Studi Kasus Aktif:</strong> Menampilkan perbandingan data default pilihan transportasi (Bis, Angkot, Ojek) sesuai materi slide.
-        </div>
-    </div>
-    {% endif %}
-
     <!-- SECTION 1: MANAJEMEN DATA INPUT -->
-    <div class="row g-4 mb-4">
+    <div class="row g-3 mb-4">
         <!-- Form Kriteria & Tabel Kriteria -->
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-3">
-                    <span><i class="fa-solid fa-list-check me-2 text-primary"></i>Data Kriteria</span>
+                <div class="card-header fw-bold d-flex justify-content-between align-items-center py-3">
+                    <span><i class="fa-solid fa-list-check me-2 text-primary"></i>Kriteria</span>
                     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddKriteria">
-                        <i class="fa-solid fa-plus me-1"></i> Tambah Kriteria
+                        <i class="fa-solid fa-plus me-1"></i> Tambah
                     </button>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                            <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Nama Kriteria</th>
-                                    <th>Bobot Asli</th>
+                                    <th>Nama</th>
+                                    <th>Bobot</th>
                                     <th>Tipe</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -88,7 +90,7 @@
                                         <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#modalEditKriteria{{ k.id }}">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
-                                        <a href="/kriteria/delete/{{ k.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus kriteria ini?')">
+                                        <a href="/kriteria/delete/{{ k.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus?')">
                                             <i class="fa-solid fa-trash"></i>
                                         </a>
                                     </td>
@@ -121,14 +123,14 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                                <button type="submit" class="btn btn-primary">Simpan</button>
                                             </div>
                                         </form>
                                     </div>
                                 </div>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">Belum ada data kriteria.</td>
+                                    <td colspan="5" class="text-center text-muted py-3">Belum ada data.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -138,33 +140,33 @@
             </div>
         </div>
 
-        <!-- Form Alternatif & Matriks Input Rating -->
+        <!-- Form Alternatif -->
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-3">
-                    <span><i class="fa-solid fa-users me-2 text-success"></i>Tambah Alternatif & Matriks Rating</span>
+                <div class="card-header fw-bold py-3">
+                    <span><i class="fa-solid fa-users me-2 text-success"></i>Tambah Alternatif & Rating</span>
                 </div>
                 <div class="card-body">
                     {% if kriteria %}
                     <form action="/alternatif/add" method="POST">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Nama Alternatif Baru</label>
-                            <input type="text" name="nama_alternatif" class="form-control" placeholder="Contoh: Taksi / Kereta" required>
+                            <input type="text" name="nama_alternatif" class="form-control" placeholder="Contoh: Taksi" required>
                         </div>
-                        <p class="fw-bold mb-2 fs-6">Isi Nilai Rating Evaluasi (Skala Skalar/Nilai):</p>
+                        <p class="fw-bold mb-2 small">Nilai Evaluasi:</p>
                         <div class="row g-2 mb-3">
                             {% for k in kriteria %}
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">{{ k.nama_kriteria }} ({{ k.tipe }})</label>
-                                <input type="number" step="0.01" name="kriteria_{{ k.id }}" class="form-control" placeholder="Nilai..." required>
+                            <div class="col-6">
+                                <label class="form-label small text-muted text-truncate w-100">{{ k.nama_kriteria }}</label>
+                                <input type="number" step="0.01" name="kriteria_{{ k.id }}" class="form-control form-control-sm" placeholder="Nilai..." required>
                             </div>
                             {% endfor %}
                         </div>
-                        <button type="submit" class="btn btn-success w-100"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan Alternatif Baru</button>
+                        <button type="submit" class="btn btn-success w-100"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan</button>
                     </form>
                     {% else %}
                     <div class="alert alert-info mb-0">
-                        Tambahkan setidaknya 1 Kriteria terlebih dahulu sebelum memasukkan data Alternatif.
+                        Tambahkan Kriteria terlebih dahulu.
                     </div>
                     {% endif %}
                 </div>
@@ -172,19 +174,19 @@
         </div>
     </div>
 
-    <!-- SECTION 2: MATRIKS KEPUTUSAN SAAT INI -->
+    <!-- SECTION 2: MATRIKS EVALUASI -->
     <div class="card mb-4">
-        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-            <span><i class="fa-solid fa-table me-2 text-info"></i>Matriks Evaluasi Saat Ini (Raw Data)</span>
+        <div class="card-header fw-bold py-3">
+            <span><i class="fa-solid fa-table me-2 text-info"></i>Matriks Evaluasi Saat Ini</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered align-middle mb-0 text-center">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Alternatif</th>
                             {% for k in kriteria %}
-                            <th>{{ k.nama_kriteria }} <br><small class="text-muted">({{ k.tipe }})</small></th>
+                            <th>{{ k.nama_kriteria }}</th>
                             {% endfor %}
                             <th>Aksi</th>
                         </tr>
@@ -197,14 +199,14 @@
                             <td>{{ rating_matrix[alt.id][k.id] }}</td>
                             {% endfor %}
                             <td>
-                                <a href="/alternatif/delete/{{ alt.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus alternatif ini?')">
+                                <a href="/alternatif/delete/{{ alt.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus?')">
                                     <i class="fa-solid fa-trash"></i>
                                 </a>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="{{ kriteria|length + 2 }}" class="text-muted py-3">Matriks nilai masih kosong.</td>
+                            <td colspan="{{ kriteria|length + 2 }}" class="text-muted py-3">Matriks nilai kosong.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -213,204 +215,148 @@
         </div>
     </div>
 
-    <!-- SECTION 3: HASIL KALKULASI SPK (TAB NAVIGATION) -->
+    <!-- SECTION 3: HASIL KALKULASI -->
     <div class="card">
-        <div class="card-header bg-white py-3">
+        <div class="card-header py-2">
             <ul class="nav nav-pills card-header-pills" id="spkTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold" id="mfep-tab" data-bs-toggle="pill" data-bs-target="#mfep" type="button" role="tab">
-                        <i class="fa-solid fa-calculator me-1"></i> Metode MFEP
+                    <button class="nav-link active fw-bold btn-sm" id="mfep-tab" data-bs-toggle="pill" data-bs-target="#mfep" type="button" role="tab">
+                        Metode MFEP
                     </button>
                 </li>
-                <!-- TAB SAW TERPERBAIKI DENGAN TARGET ID '#saw' -->
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold" id="saw-tab" data-bs-toggle="pill" data-bs-target="#saw" type="button" role="tab">
-                        <i class="fa-solid fa-chart-line me-1"></i> Metode SAW
+                    <button class="nav-link fw-bold btn-sm" id="saw-tab" data-bs-toggle="pill" data-bs-target="#saw" type="button" role="tab">
+                        Metode SAW
                     </button>
                 </li>
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content" id="spkTabContent">
-                
                 <!-- HASIL MFEP -->
                 <div class="tab-pane fade show active" id="mfep" role="tabpanel">
-                    <h5 class="fw-bold mb-3 text-primary">Hasil Perhitungan & Ranking MFEP</h5>
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered table-striped text-center align-middle">
-                            <thead class="table-dark">
+                    <h6 class="fw-bold mb-3 text-primary">Hasil Ranking MFEP</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead>
                                 <tr>
                                     <th>Peringkat</th>
-                                    <th>Nama Alternatif</th>
-                                    <th>Total Skor MFEP</th>
+                                    <th>Alternatif</th>
+                                    <th>Skor MFEP</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for r in results_mfep %}
                                 <tr {% if loop.first %}class="table-success fw-bold"{% endif %}>
-                                    <td>
-                                        {% if loop.first %}<i class="fa-solid fa-trophy text-warning me-1"></i>{% endif %}
-                                        #{{ loop.index }}
-                                    </td>
+                                    <td>#{{ loop.index }}</td>
                                     <td>{{ r.nama }}</td>
                                     <td>{{ r.skor }}</td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="3" class="text-muted">Tidak ada data untuk dihitung.</td></tr>
+                                <tr><td colspan="3" class="text-muted">Tidak ada data.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-
-                    <h6 class="fw-bold text-secondary">Rincian Langkah Perhitungan MFEP:</h6>
-                    <div class="accordion" id="accordionMFEP">
-                        {% for alt_nama, steps in steps_mfep.items() %}
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="headingMfep{{ loop.index }}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMfep{{ loop.index }}">
-                                    Detail Perhitungan: {{ alt_nama }}
-                                </button>
-                            </h2>
-                            <div id="collapseMfep{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionMFEP">
-                                <div class="accordion-body p-0">
-                                    <table class="table table-sm table-hover mb-0 text-center">
-                                        <thead>
-                                            <tr>
-                                                <th>Kriteria</th>
-                                                <th>Nilai Evaluasi</th>
-                                                <th>Bobot Norm.</th>
-                                                <th>Hasil Perkalilan</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for st in steps %}
-                                            <tr>
-                                                <td>{{ st.kriteria }}</td>
-                                                <td>{{ st.nilai_mentah }}</td>
-                                                <td>{{ st.bobot | round(4) }}</td>
-                                                <td>{{ st.hasil_kali | round(4) }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
                 </div>
 
-                <!-- HASIL SAW TERPERBAIKI DENGAN ID 'saw' -->
+                <!-- HASIL SAW -->
                 <div class="tab-pane fade" id="saw" role="tabpanel">
-                    <h5 class="fw-bold mb-3 text-primary">Hasil Perhitungan & Ranking SAW</h5>
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered table-striped text-center align-middle">
-                            <thead class="table-dark">
+                    <h6 class="fw-bold mb-3 text-primary">Hasil Ranking SAW</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead>
                                 <tr>
                                     <th>Peringkat</th>
-                                    <th>Nama Alternatif</th>
-                                    <th>Total Skor SAW (V)</th>
+                                    <th>Alternatif</th>
+                                    <th>Skor SAW (V)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for r in results_saw %}
                                 <tr {% if loop.first %}class="table-success fw-bold"{% endif %}>
-                                    <td>
-                                        {% if loop.first %}<i class="fa-solid fa-trophy text-warning me-1"></i>{% endif %}
-                                        #{{ loop.index }}
-                                    </td>
+                                    <td>#{{ loop.index }}</td>
                                     <td>{{ r.nama }}</td>
                                     <td>{{ r.skor }}</td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="3" class="text-muted">Tidak ada data untuk dihitung.</td></tr>
+                                <tr><td colspan="3" class="text-muted">Tidak ada data.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-
-                    <h6 class="fw-bold text-secondary">Rincian Normalisasi & Matriks SAW:</h6>
-                    <div class="accordion" id="accordionSAW">
-                        {% for alt_nama, steps in steps_saw.items() %}
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="headingSaw{{ loop.index }}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSaw{{ loop.index }}">
-                                    Detail Normalisasi SAW: {{ alt_nama }}
-                                </button>
-                            </h2>
-                            <div id="collapseSaw{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionSAW">
-                                <div class="accordion-body p-0">
-                                    <table class="table table-sm table-hover mb-0 text-center">
-                                        <thead>
-                                            <tr>
-                                                <th>Kriteria</th>
-                                                <th>Tipe</th>
-                                                <th>Nilai Awal</th>
-                                                <th>Normalisasi (R)</th>
-                                                <th>Bobot Norm.</th>
-                                                <th>Terbobot</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for st in steps %}
-                                            <tr>
-                                                <td>{{ st.kriteria }}</td>
-                                                <td><span class="badge {% if st.tipe == 'Benefit' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ st.tipe }}</span></td>
-                                                <td>{{ st.nilai_mentah }}</td>
-                                                <td>{{ st.nilai_normalisasi | round(4) }}</td>
-                                                <td>{{ st.bobot | round(4) }}</td>
-                                                <td>{{ st.hasil_kali | round(4) }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
                 </div>
-
             </div>
         </div>
     </div>
 
 </div>
 
-<!-- Modal Modal Add Kriteria -->
+<!-- Modal Add Kriteria -->
 <div class="modal fade" id="modalAddKriteria" tabindex="-1">
     <div class="modal-dialog">
         <form action="/kriteria/add" method="POST" class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Tambah Kriteria Baru</h5>
+                <h5 class="modal-title">Tambah Kriteria</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Nama Kriteria</label>
-                    <input type="text" name="nama_kriteria" class="form-control" placeholder="Contoh: Keamanan" required>
+                    <input type="text" name="nama_kriteria" class="form-control" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Bobot</label>
-                    <input type="number" step="0.01" name="bobot" class="form-control" placeholder="Contoh: 0.25 atau 25" required>
+                    <input type="number" step="0.01" name="bobot" class="form-control" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Tipe Kriteria</label>
                     <select name="tipe" class="form-select">
-                        <option value="Benefit">Benefit (Semakin besar semakin baik)</option>
-                        <option value="Cost">Cost (Semakin kecil semakin baik)</option>
+                        <option value="Benefit">Benefit</option>
+                        <option value="Cost">Cost</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan Kriteria</button>
+                <button type="submit" class="btn btn-primary">Simpan</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Bootstrap 5 JS Bundle dengan Popper -->
+<!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Script Dark Mode Toggle -->
+<script>
+    function toggleTheme() {
+        const html = document.documentElement;
+        const icon = document.getElementById('themeIcon');
+        const currentTheme = html.getAttribute('data-bs-theme');
+        
+        if (currentTheme === 'dark') {
+            html.setAttribute('data-bs-theme', 'light');
+            icon.className = 'fa-solid fa-moon';
+            localStorage.setItem('theme', 'light');
+        } else {
+            html.setAttribute('data-bs-theme', 'dark');
+            icon.className = 'fa-solid fa-sun';
+            localStorage.setItem('theme', 'dark');
+        }
+    }
+
+    // simpan preferensi mode di browser lokal
+    (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        document.addEventListener('DOMContentLoaded', () => {
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.className = savedTheme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+        });
+    })();
+</script>
 </body>
 </html>
