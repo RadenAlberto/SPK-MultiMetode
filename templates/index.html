@@ -357,8 +357,8 @@
                                 <div class="card card-body">
                                     <h6 class="fw-bold">Rincian Perhitungan SAW</h6>
                                     <p class="text-muted small">
-                                        <strong>Rumus Normalisasi ($R_{ij}$):</strong> Benefit = $X_{ij} / \max(X_j)$ | Cost = $\min(X_j) / X_{ij}$[cite: 3]<br>
-                                        <strong>Rumus Preferensi ($V_i$):</strong> $V_i = \sum (W_j \times R_{ij})$[cite: 3]
+                                        <strong>Rumus Normalisasi ($R_{ij}$):</strong> Benefit = $X_{ij} / \max(X_j)$ | Cost = $\min(X_j) / X_{ij}$<br>
+                                        <strong>Rumus Preferensi ($V_i$):</strong> $V_i = \sum (W_j \times R_{ij})$
                                     </p>
 
                                     {% for item in saw_detail %}
@@ -453,7 +453,6 @@
         const themeIcon = document.getElementById('themeIcon');
         const htmlElement = document.documentElement;
 
-        // Ambil preferensi dari localStorage
         const savedTheme = localStorage.getItem('theme') || 'light';
         setTheme(savedTheme);
 

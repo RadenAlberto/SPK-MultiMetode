@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
-import os
 
 app = Flask(__name__)
 app.secret_key = 'spk_secret_key_123'
@@ -16,7 +15,6 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Tabel Kriteria
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS kriteria (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +24,6 @@ def init_db():
         )
     ''')
     
-    # Tabel Alternatif
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS alternatif (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +31,6 @@ def init_db():
         )
     ''')
     
-    # Tabel Nilai Rating Matrix
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS nilai_rating (
             alternatif_id INTEGER NOT NULL,
@@ -49,7 +45,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Inisialisasi DB saat awal jalankan aplikasi
 init_db()
 
 @app.route('/')
@@ -57,14 +52,12 @@ def index():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Ambil Kriteria & Alternatif
     cursor.execute("SELECT * FROM kriteria")
     kriteria_list = [dict(row) for row in cursor.fetchall()]
     
     cursor.execute("SELECT * FROM alternatif")
     alternatif_list = [dict(row) for row in cursor.fetchall()]
     
-    # 2. Ambil Matriks Nilai Rating
     cursor.execute("SELECT * FROM nilai_rating")
     rating_rows = cursor.fetchall()
     
@@ -77,7 +70,10 @@ def index():
             matrix[alt_id] = {}
         matrix[alt_id][k_id] = val
         
-    total_bobot_input = sum([k['bobot'] for k in kriteria_list]) or 1.0
+    total_bobot_input = sum([k['bobot'] for k in kriteria_list])
+    # Pencegahan Division by Zero jika kriteria belum diisi
+    if total_bobot_input == 0:
+        total_bobot_input = 1.0
 
     # ==========================
     # LOGIKA PERHITUNGAN MFEP
@@ -115,7 +111,6 @@ def index():
             'total_skor': total_skor
         })
         
-    # Urutkan ranking MFEP (descending)
     mfep_ranking = sorted(mfep_ranking, key=lambda x: x['total_skor'], reverse=True)
 
     # ==========================
@@ -125,9 +120,15 @@ def index():
     for k in kriteria_list:
         k_id = k['id']
         ratings = [matrix.get(a['id'], {}).get(k_id, 0.0) for a in alternatif_list]
+        
+        # Penanganan aman jika nilai rating masih kosong/0
+        valid_ratings = [r for r in ratings if r > 0]
+        max_val = max(ratings) if ratings else 1.0
+        min_val = min(valid_ratings) if valid_ratings else 1.0
+
         max_min_kriteria[k_id] = {
-            'max': max(ratings) if ratings and max(ratings) > 0 else 1.0,
-            'min': min(ratings) if ratings and min(ratings) > 0 else 1.0
+            'max': max_val if max_val > 0 else 1.0,
+            'min': min_val if min_val > 0 else 1.0
         }
 
     saw_detail = []
@@ -145,13 +146,13 @@ def index():
             tipe = k['tipe'].lower()
 
             if tipe == 'benefit':
-                max_val = max_min_kriteria[k_id]['max']
-                r_ij = rating / max_val if max_val > 0 else 0
-                rumus_str = f"{rating} / {max_val}"
+                max_v = max_min_kriteria[k_id]['max']
+                r_ij = rating / max_v if max_v > 0 else 0.0
+                rumus_str = f"{rating} / {max_v}"
             else: # Cost
-                min_val = max_min_kriteria[k_id]['min']
-                r_ij = min_val / rating if rating > 0 else 0
-                rumus_str = f"{min_val} / {rating}"
+                min_v = max_min_kriteria[k_id]['min']
+                r_ij = min_v / rating if rating > 0 else 0.0
+                rumus_str = f"{min_v} / {rating}"
 
             v_ij = bobot_norm * r_ij
             total_v += v_ij
@@ -177,7 +178,6 @@ def index():
             'total_v': total_v
         })
 
-    # Urutkan ranking SAW (descending)
     saw_ranking = sorted(saw_ranking, key=lambda x: x['total_v'], reverse=True)
 
     conn.close()
@@ -205,11 +205,9 @@ def add_kriteria():
         cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (?, ?, ?)", (nama, bobot, tipe))
         conn.commit()
         
-        # Tambahkan baris di nilai_rating untuk alternatif yang sudah ada
+        k_id = cursor.lastrowid
         cursor.execute("SELECT id FROM alternatif")
         alts = cursor.fetchall()
-        cursor.execute("SELECT id FROM kriteria ORDER BY id DESC LIMIT 1")
-        k_id = cursor.fetchone()['id']
         
         for alt in alts:
             cursor.execute("INSERT OR IGNORE INTO nilai_rating (alternatif_id, kriteria_id, rating) VALUES (?, ?, 0)", (alt['id'], k_id))
@@ -256,7 +254,6 @@ def add_alternatif():
         conn.commit()
         alt_id = cursor.lastrowid
 
-        # Buat entri kosong di nilai_rating untuk kriteria yang ada
         cursor.execute("SELECT id FROM kriteria")
         kriterias = cursor.fetchall()
         for k in kriterias:
@@ -311,7 +308,6 @@ def seed_data():
     cursor.execute("DELETE FROM alternatif")
     cursor.execute("DELETE FROM kriteria")
 
-    # Sample Data
     cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES ('Harga', 30, 'Cost')")
     cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES ('Kualitas', 40, 'Benefit')")
     cursor.execute("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES ('Servis', 30, 'Benefit')")
@@ -328,7 +324,6 @@ def seed_data():
     cursor.execute("SELECT id FROM alternatif")
     a_ids = [row['id'] for row in cursor.fetchall()]
 
-    # Ratings
     sample_ratings = [
         (a_ids[0], k_ids[0], 80), (a_ids[0], k_ids[1], 70), (a_ids[0], k_ids[2], 90),
         (a_ids[1], k_ids[0], 60), (a_ids[1], k_ids[1], 85), (a_ids[1], k_ids[2], 75),
