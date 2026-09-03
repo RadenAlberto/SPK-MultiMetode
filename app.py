@@ -1,4 +1,5 @@
 import os
+import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -50,11 +51,93 @@ def init_db():
                 UNIQUE(alternatif_id, kriteria_id)
             );
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS db_backup_history (
+                id SERIAL PRIMARY KEY,
+                keterangan VARCHAR(255) NOT NULL,
+                snapshot_data TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
         conn.commit()
         cursor.close()
         conn.close()
     except Exception as e:
         print(f"[Init DB Error]: {e}")
+
+def create_backup_snapshot(keterangan="Backup Otomatis"):
+    """Menyimpan snapshot seluruh data saat ini ke tabel db_backup_history untuk fitur Undo"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM kriteria ORDER BY id ASC")
+        k_data = [dict(r) for r in cursor.fetchall()]
+        cursor.execute("SELECT * FROM alternatif ORDER BY id ASC")
+        a_data = [dict(r) for r in cursor.fetchall()]
+        cursor.execute("SELECT * FROM nilai_rating ORDER BY id ASC")
+        r_data = [dict(r) for r in cursor.fetchall()]
+        
+        # Hanya simpan snapshot jika ada data yang tersimpan
+        if k_data or a_data:
+            payload = json.dumps({
+                'kriteria': k_data,
+                'alternatif': a_data,
+                'nilai_rating': r_data
+            })
+            cursor.execute("INSERT INTO db_backup_history (keterangan, snapshot_data) VALUES (%s, %s)", (keterangan, payload))
+            conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"[Backup Error]: {e}")
+
+def restore_latest_snapshot():
+    """Mengembalikan data dari snapshot cadangan terakhir"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM db_backup_history ORDER BY id DESC LIMIT 1")
+        backup = cursor.fetchone()
+        if not backup:
+            return False, "Tidak ada data snapshot/cadangan yang bisa dipulihkan."
+        
+        data = json.loads(backup['snapshot_data'])
+        
+        # Bersihkan tabel utama
+        cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
+        
+        # Pulihkan Kriteria
+        for k in data.get('kriteria', []):
+            cursor.execute("INSERT INTO kriteria (id, nama_kriteria, bobot, tipe) VALUES (%s, %s, %s, %s)",
+                           (k['id'], k['nama_kriteria'], k['bobot'], k['tipe']))
+        if data.get('kriteria'):
+            cursor.execute("SELECT setval(pg_get_serial_sequence('kriteria', 'id'), coalesce(max(id), 1)) FROM kriteria;")
+        
+        # Pulihkan Alternatif
+        for a in data.get('alternatif', []):
+            cursor.execute("INSERT INTO alternatif (id, nama_alternatif) VALUES (%s, %s)",
+                           (a['id'], a['nama_alternatif']))
+        if data.get('alternatif'):
+            cursor.execute("SELECT setval(pg_get_serial_sequence('alternatif', 'id'), coalesce(max(id), 1)) FROM alternatif;")
+        
+        # Pulihkan Nilai Rating
+        for r in data.get('nilai_rating', []):
+            cursor.execute("INSERT INTO nilai_rating (id, alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s, %s)",
+                           (r['id'], r['alternatif_id'], r['kriteria_id'], r['nilai_evaluasi']))
+        if data.get('nilai_rating'):
+            cursor.execute("SELECT setval(pg_get_serial_sequence('nilai_rating', 'id'), coalesce(max(id), 1)) FROM nilai_rating;")
+            
+        # Hapus backup yang baru saja di-restore
+        cursor.execute("DELETE FROM db_backup_history WHERE id = %s", (backup['id'],))
+        
+        conn.commit()
+        return True, f"Berhasil memulihkan snapshot: '{backup['keterangan']}'"
+    except Exception as e:
+        conn.rollback()
+        return False, f"Gagal memulihkan snapshot: {str(e)}"
+    finally:
+        cursor.close()
+        conn.close()
 
 def seed_default_data():
     conn = get_db_connection()
@@ -326,6 +409,11 @@ def index():
         JOIN kriteria k ON nr.kriteria_id = k.id
     ''')
     rating_rows = cursor.fetchall()
+    
+    # Cek apakah ada snapshot backup yang tersedia untuk di-Undo
+    cursor.execute("SELECT id, keterangan, created_at FROM db_backup_history ORDER BY id DESC LIMIT 1")
+    latest_backup = cursor.fetchone()
+    
     cursor.close()
     conn.close()
     
@@ -357,7 +445,8 @@ def index():
         results_saw=results_saw, steps_saw=steps_saw,
         results_wp=results_wp, steps_wp=steps_wp,
         results_smart=results_smart, steps_smart=steps_smart,
-        audit_warning=audit_warning
+        audit_warning=audit_warning,
+        latest_backup=latest_backup
     )
 
 @app.route('/kriteria/add', methods=['POST'])
@@ -458,11 +547,28 @@ def delete_alternatif(id):
         conn.close()
     return redirect(url_for('index'))
 
+@app.route('/backup/create')
+def manual_backup():
+    create_backup_snapshot("Snapshot Manual Pengguna")
+    flash('Snapshot data berhasil dicadangkan! Anda bisa memulihkannya kapan saja via menu Undo.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/backup/undo')
+def undo_restore():
+    success, message = restore_latest_snapshot()
+    if success:
+        flash(f'⏪ {message}', 'success')
+    else:
+        flash(f'⚠️ {message}', 'warning')
+    return redirect(url_for('index'))
+
 @app.route('/seed')
 def seed():
     try:
+        # Buat backup otomatis sebelum ditimpa data PPT
+        create_backup_snapshot("Sebelum Muat Ulang Kasus PPT")
         seed_default_data()
-        flash('Studi kasus default (Transportasi dari PPT) berhasil dimuat!', 'info')
+        flash('Studi kasus default (Transportasi dari PPT) berhasil dimuat! Data lama otomatis dicadangkan (bisa di-Undo).', 'info')
     except Exception as e:
         flash(f'Gagal memuat data default: {str(e)}', 'danger')
     return redirect(url_for('index'))
@@ -470,13 +576,15 @@ def seed():
 @app.route('/reset')
 def reset():
     try:
+        # Buat backup otomatis sebelum reset total
+        create_backup_snapshot("Sebelum Reset Database Kosong")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
         conn.commit()
         cursor.close()
         conn.close()
-        flash('Database berhasil dibersihkan!', 'warning')
+        flash('Database berhasil dikosongkan! Data lama otomatis dicadangkan (bisa di-Undo via menu Database).', 'warning')
     except Exception as e:
         flash(f'Gagal membersihkan database: {str(e)}', 'danger')
     return redirect(url_for('index'))
