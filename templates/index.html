@@ -129,12 +129,12 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Tindakan Berisiko (Zona Bahaya)</h6></li>
                         <li>
-                            <button class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#modalConfirmSeed">
+                            <button type="button" class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#modalConfirmSeed">
                                 <i class="fa-solid fa-arrows-spin me-2"></i> Muat Kasus PPT Default
                             </button>
                         </li>
                         <li>
-                            <button class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmReset">
+                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmReset">
                                 <i class="fa-solid fa-trash-can me-2"></i> Reset Kosongkan Database
                             </button>
                         </li>
@@ -180,7 +180,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fa-solid fa-sliders me-2 text-primary"></i>1. Kelola Kriteria</span>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddKriteria">
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddKriteria">
                             <i class="fa-solid fa-plus"></i>
                         </button>
                     </div>
@@ -207,49 +207,14 @@
                                                 </span>
                                             </td>
                                             <td class="text-end pe-3">
-                                                <button class="btn btn-light btn-sm text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditKriteria{{ k.id }}">
+                                                <button type="button" class="btn btn-light btn-sm text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditKriteria{{ k.id }}" title="Edit">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
-                                                <a href="/kriteria/delete/{{ k.id }}" class="btn btn-light btn-sm text-danger" onclick="return confirm('Hapus kriteria ini?');">
+                                                <a href="/kriteria/delete/{{ k.id }}" class="btn btn-light btn-sm text-danger" onclick="return confirm('Hapus kriteria ini?');" title="Hapus">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </a>
                                             </td>
                                         </tr>
-
-                                        <!-- Modal Edit -->
-                                        <div class="modal fade" id="modalEditKriteria{{ k.id }}" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <form action="/kriteria/edit/{{ k.id }}" method="POST">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Edit Kriteria: {{ k.nama_kriteria }}</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Nama Kriteria</label>
-                                                                <input type="text" class="form-control" name="nama_kriteria" value="{{ k.nama_kriteria }}" required>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Bobot Asal</label>
-                                                                <input type="number" class="form-control" name="bobot" step="0.01" value="{{ k.bobot_asal }}" required>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">Tipe</label>
-                                                                <select class="form-select" name="tipe">
-                                                                    <option value="Benefit" {{ 'selected' if k.tipe == 'Benefit' }}>Benefit (Keuntungan)</option>
-                                                                    <option value="Cost" {{ 'selected' if k.tipe == 'Cost' }}>Cost (Biaya)</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                            <button type="submit" class="btn btn-primary">Simpan</button>
-                                                        </div>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
                                         {% endfor %}
                                     {% else %}
                                         <tr>
@@ -323,150 +288,4 @@
                                         {% for alt in alternatif %}
                                         <tr>
                                             <td class="ps-3"><strong>{{ alt.nama_alternatif }}</strong></td>
-                                            {% for k in kriteria %}
-                                            <td class="text-center">{{ rating_matrix[alt.id][k.id] }}</td>
-                                            {% endfor %}
-                                            <td class="text-center pe-3">
-                                                <a href="/alternatif/delete/{{ alt.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Hapus alternatif ini?');" title="Hapus">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        <tr>
-                                            <td colspan="{{ kriteria|length + 2 }}" class="text-center text-muted py-4">Belum ada alternatif yang terdaftar.</td>
-                                        </tr>
-                                    {% endif %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Perankingan Multi-Metode -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div>
-                            <i class="fa-solid fa-ranking-star me-2 text-warning"></i>Hasil Perankingan SPK Multi-Metode
-                        </div>
-                        <button id="btn-toggle-advanced" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
-                            <i id="icon-advanced" class="fa-solid fa-eye"></i>
-                            <span id="text-advanced">Tampilkan WP &amp; SMART</span>
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
-                            <li class="nav-item">
-                                <button class="nav-link active" id="pills-mfep-tab" data-bs-toggle="pill" data-bs-target="#pills-mfep" type="button">
-                                    <i class="fa-solid fa-table-list me-1"></i> MFEP
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" id="pills-saw-tab" data-bs-toggle="pill" data-bs-target="#pills-saw" type="button">
-                                    <i class="fa-solid fa-percent me-1"></i> SAW
-                                </button>
-                            </li>
-                            <li class="nav-item advanced-method">
-                                <button class="nav-link" id="pills-wp-tab" data-bs-toggle="pill" data-bs-target="#pills-wp" type="button">
-                                    <i class="fa-solid fa-box-open me-1"></i> WP
-                                </button>
-                            </li>
-                            <li class="nav-item advanced-method">
-                                <button class="nav-link" id="pills-smart-tab" data-bs-toggle="pill" data-bs-target="#pills-smart" type="button">
-                                    <i class="fa-solid fa-brain me-1"></i> SMART
-                                </button>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content" id="pills-tabContent">
-                            <!-- TAB 1: MFEP -->
-                            <div class="tab-pane fade show active" id="pills-mfep" role="tabpanel">
-                                <div class="bg-body-secondary p-3 rounded mb-3">
-                                    <h6><strong>Metode MFEP (Multifactor Evaluation Process)</strong></h6>
-                                    <p class="small text-muted mb-0">
-                                        Perhitungan evaluasi faktor terbobot: <span class="text-formula">Nbe = Nbf x Nef</span>. Total Nilai <span class="text-formula">Tne = &Sigma; Nbe</span>.
-                                    </p>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th>Rank</th>
-                                                <th>Alternatif</th>
-                                                <th class="text-end">Total Skor Akhir</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for row in results_mfep %}
-                                            <tr class="{{ 'ranking-1' if loop.index == 1 }}">
-                                                <td><strong>#{{ loop.index }}</strong></td>
-                                                <td><strong>{{ row.nama }}</strong></td>
-                                                <td class="text-end"><span class="badge bg-success fs-6">{{ row.skor }}</span></td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted py-3">Belum ada data untuk dihitung.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {% if steps_mfep %}
-                                <h6 class="mt-4 mb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i>Langkah Perhitungan MFEP:</h6>
-                                <div class="accordion" id="accordionMFEP">
-                                    {% for alt_name, steps in steps_mfep.items() %}
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMFEP{{ loop.index }}">
-                                                Detail Perhitungan: {{ alt_name }}
-                                            </button>
-                                        </h2>
-                                        <div id="collapseMFEP{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionMFEP">
-                                            <div class="accordion-body p-2">
-                                                <table class="table table-sm table-bordered mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Kriteria</th>
-                                                            <th>Evaluasi Faktor (Nef)</th>
-                                                            <th>Bobot Faktor (Nbf)</th>
-                                                            <th>Hasil Kali (Nbe)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for s in steps %}
-                                                        <tr>
-                                                            <td>{{ s.kriteria }}</td>
-                                                            <td>{{ s.nilai_mentah }}</td>
-                                                            <td>{{ s.bobot|round(4) }}</td>
-                                                            <td>{{ s.hasil_kali|round(4) }}</td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                            </div>
-
-                            <!-- TAB 2: SAW -->
-                            <div class="tab-pane fade" id="pills-saw" role="tabpanel">
-                                <div class="bg-body-secondary p-3 rounded mb-3">
-                                    <h6><strong>Metode SAW (Simple Additive Weighting)</strong></h6>
-                                    <p class="small text-muted mb-0">
-                                        Normalisasi matriks: Benefit (<span class="text-formula">x_ij / max</span>) dan Cost (<span class="text-formula">min / x_ij</span>).
-                                    </p>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th>Rank</th>
-                                                <th>Alternatif</th>
-                                                <th class="text-end">Nilai Preferensi (V)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
+                                            {% for k in kr
