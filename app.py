@@ -1,5 +1,6 @@
 import os
 import json
+import traceback
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -25,6 +26,7 @@ def get_db_connection():
 def init_db():
     if not DATABASE_URL:
         return
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -61,12 +63,17 @@ def init_db():
         ''')
         conn.commit()
         cursor.close()
-        conn.close()
     except Exception as e:
+        if conn:
+            conn.rollback()
         print(f"[Init DB Error]: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 def create_backup_snapshot(keterangan="Backup Otomatis"):
     """Menyimpan snapshot seluruh data saat ini ke tabel db_backup_history untuk fitur Undo"""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -77,7 +84,6 @@ def create_backup_snapshot(keterangan="Backup Otomatis"):
         cursor.execute("SELECT * FROM nilai_rating ORDER BY id ASC")
         r_data = [dict(r) for r in cursor.fetchall()]
         
-        # Hanya simpan snapshot jika ada data yang tersimpan
         if k_data or a_data:
             payload = json.dumps({
                 'kriteria': k_data,
@@ -87,15 +93,20 @@ def create_backup_snapshot(keterangan="Backup Otomatis"):
             cursor.execute("INSERT INTO db_backup_history (keterangan, snapshot_data) VALUES (%s, %s)", (keterangan, payload))
             conn.commit()
         cursor.close()
-        conn.close()
     except Exception as e:
+        if conn:
+            conn.rollback()
         print(f"[Backup Error]: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 def restore_latest_snapshot():
     """Mengembalikan data dari snapshot cadangan terakhir"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM db_backup_history ORDER BY id DESC LIMIT 1")
         backup = cursor.fetchone()
         if not backup:
@@ -103,83 +114,83 @@ def restore_latest_snapshot():
         
         data = json.loads(backup['snapshot_data'])
         
-        # Bersihkan tabel utama
         cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
         
-        # Pulihkan Kriteria
         for k in data.get('kriteria', []):
             cursor.execute("INSERT INTO kriteria (id, nama_kriteria, bobot, tipe) VALUES (%s, %s, %s, %s)",
                            (k['id'], k['nama_kriteria'], k['bobot'], k['tipe']))
         if data.get('kriteria'):
             cursor.execute("SELECT setval(pg_get_serial_sequence('kriteria', 'id'), coalesce(max(id), 1)) FROM kriteria;")
         
-        # Pulihkan Alternatif
         for a in data.get('alternatif', []):
             cursor.execute("INSERT INTO alternatif (id, nama_alternatif) VALUES (%s, %s)",
                            (a['id'], a['nama_alternatif']))
         if data.get('alternatif'):
             cursor.execute("SELECT setval(pg_get_serial_sequence('alternatif', 'id'), coalesce(max(id), 1)) FROM alternatif;")
         
-        # Pulihkan Nilai Rating
         for r in data.get('nilai_rating', []):
             cursor.execute("INSERT INTO nilai_rating (id, alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s, %s)",
                            (r['id'], r['alternatif_id'], r['kriteria_id'], r['nilai_evaluasi']))
         if data.get('nilai_rating'):
             cursor.execute("SELECT setval(pg_get_serial_sequence('nilai_rating', 'id'), coalesce(max(id), 1)) FROM nilai_rating;")
             
-        # Hapus backup yang baru saja di-restore
         cursor.execute("DELETE FROM db_backup_history WHERE id = %s", (backup['id'],))
-        
         conn.commit()
+        cursor.close()
         return True, f"Berhasil memulihkan snapshot: '{backup['keterangan']}'"
     except Exception as e:
-        conn.rollback()
+        if conn:
+            conn.rollback()
         return False, f"Gagal memulihkan snapshot: {str(e)}"
     finally:
-        cursor.close()
-        conn.close()
+        if conn:
+            conn.close()
 
 def seed_default_data():
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
-    
-    kriteria_data = [
-        ('Keamanan', 0.40, 'Benefit'),
-        ('Kepadatan', 0.25, 'Cost'),
-        ('Jalur Macet', 0.15, 'Cost'),
-        ('Ongkos', 0.20, 'Cost')
-    ]
-    cursor.executemany("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (%s, %s, %s)", kriteria_data)
-    
-    cursor.execute("SELECT id, nama_kriteria FROM kriteria")
-    k_ids = {row['nama_kriteria']: row['id'] for row in cursor.fetchall()}
-    
-    alternatifs = ['Bis', 'Angkot', 'Ojek']
-    alt_ids = {}
-    for alt in alternatifs:
-        cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (%s) RETURNING id;", (alt,))
-        alt_ids[alt] = cursor.fetchone()['id']
-    
-    ratings = [
-        (alt_ids['Bis'], k_ids['Keamanan'], 6.0),
-        (alt_ids['Bis'], k_ids['Kepadatan'], 4.0),
-        (alt_ids['Bis'], k_ids['Jalur Macet'], 3.0),
-        (alt_ids['Bis'], k_ids['Ongkos'], 8.0),
-        (alt_ids['Angkot'], k_ids['Keamanan'], 8.0),
-        (alt_ids['Angkot'], k_ids['Kepadatan'], 7.0),
-        (alt_ids['Angkot'], k_ids['Jalur Macet'], 5.0),
-        (alt_ids['Angkot'], k_ids['Ongkos'], 6.0),
-        (alt_ids['Ojek'], k_ids['Keamanan'], 5.0),
-        (alt_ids['Ojek'], k_ids['Kepadatan'], 9.0),
-        (alt_ids['Ojek'], k_ids['Jalur Macet'], 9.0),
-        (alt_ids['Ojek'], k_ids['Ongkos'], 3.0),
-    ]
-    cursor.executemany("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s)", ratings)
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
+        
+        kriteria_data = [
+            ('Keamanan', 0.40, 'Benefit'),
+            ('Kepadatan', 0.25, 'Cost'),
+            ('Jalur Macet', 0.15, 'Cost'),
+            ('Ongkos', 0.20, 'Cost')
+        ]
+        cursor.executemany("INSERT INTO kriteria (nama_kriteria, bobot, tipe) VALUES (%s, %s, %s)", kriteria_data)
+        
+        cursor.execute("SELECT id, nama_kriteria FROM kriteria")
+        k_ids = {row['nama_kriteria']: row['id'] for row in cursor.fetchall()}
+        
+        alternatifs = ['Bis', 'Angkot', 'Ojek']
+        alt_ids = {}
+        for alt in alternatifs:
+            cursor.execute("INSERT INTO alternatif (nama_alternatif) VALUES (%s) RETURNING id;", (alt,))
+            alt_ids[alt] = cursor.fetchone()['id']
+        
+        ratings = [
+            (alt_ids['Bis'], k_ids['Keamanan'], 6.0),
+            (alt_ids['Bis'], k_ids['Kepadatan'], 4.0),
+            (alt_ids['Bis'], k_ids['Jalur Macet'], 3.0),
+            (alt_ids['Bis'], k_ids['Ongkos'], 8.0),
+            (alt_ids['Angkot'], k_ids['Keamanan'], 8.0),
+            (alt_ids['Angkot'], k_ids['Kepadatan'], 7.0),
+            (alt_ids['Angkot'], k_ids['Jalur Macet'], 5.0),
+            (alt_ids['Angkot'], k_ids['Ongkos'], 6.0),
+            (alt_ids['Ojek'], k_ids['Keamanan'], 5.0),
+            (alt_ids['Ojek'], k_ids['Kepadatan'], 9.0),
+            (alt_ids['Ojek'], k_ids['Jalur Macet'], 9.0),
+            (alt_ids['Ojek'], k_ids['Ongkos'], 3.0),
+        ]
+        cursor.executemany("INSERT INTO nilai_rating (alternatif_id, kriteria_id, nilai_evaluasi) VALUES (%s, %s, %s)", ratings)
+        conn.commit()
+        cursor.close()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 
 class DSS_Engine:
     def __init__(self):
@@ -395,33 +406,47 @@ def index():
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT * FROM kriteria ORDER BY id ASC")
+        raw_kriteria = cursor.fetchall()
+        kriteria_list = []
+        for r in raw_kriteria:
+            kriteria_list.append({
+                'id': r['id'],
+                'nama_kriteria': r['nama_kriteria'],
+                'bobot': r['bobot'],
+                'bobot_asal': r['bobot'],
+                'tipe': r['tipe']
+            })
         
-    cursor.execute("SELECT * FROM kriteria ORDER BY id ASC")
-    kriteria_list = [dict(row) for row in cursor.fetchall()]
-    
-    cursor.execute("SELECT * FROM alternatif ORDER BY id ASC")
-    alternatif_list = [dict(row) for row in cursor.fetchall()]
-    
-    cursor.execute('''
-        SELECT nr.*, a.nama_alternatif, k.nama_kriteria 
-        FROM nilai_rating nr
-        JOIN alternatif a ON nr.alternatif_id = a.id
-        JOIN kriteria k ON nr.kriteria_id = k.id
-    ''')
-    rating_rows = cursor.fetchall()
-    
-    # Cek apakah ada snapshot backup yang tersedia untuk di-Undo
-    cursor.execute("SELECT id, keterangan, created_at FROM db_backup_history ORDER BY id DESC LIMIT 1")
-    latest_backup = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
+        cursor.execute("SELECT * FROM alternatif ORDER BY id ASC")
+        alternatif_list = [dict(row) for row in cursor.fetchall()]
+        
+        cursor.execute('''
+            SELECT nr.*, a.nama_alternatif, k.nama_kriteria 
+            FROM nilai_rating nr
+            JOIN alternatif a ON nr.alternatif_id = a.id
+            JOIN kriteria k ON nr.kriteria_id = k.id
+        ''')
+        rating_rows = cursor.fetchall()
+        
+        latest_backup = None
+        try:
+            cursor.execute("SELECT id, keterangan, created_at FROM db_backup_history ORDER BY id DESC LIMIT 1")
+            latest_backup = cursor.fetchone()
+        except Exception:
+            conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
     
     rating_matrix = {}
     for alt in alternatif_list:
         rating_matrix[alt['id']] = {k['id']: '-' for k in kriteria_list}
     for row in rating_rows:
-        rating_matrix[row['alternatif_id']][row['kriteria_id']] = row['nilai_evaluasi']
+        if row['alternatif_id'] in rating_matrix:
+            rating_matrix[row['alternatif_id']][row['kriteria_id']] = row['nilai_evaluasi']
 
     engine = DSS_Engine()
     results_mfep, steps_mfep = engine.run_mfep()
@@ -451,9 +476,9 @@ def index():
 
 @app.route('/kriteria/add', methods=['POST'])
 def add_kriteria():
-    nama = request.form['nama_kriteria'].strip()
-    bobot = float(request.form['bobot'])
-    tipe = request.form['tipe']
+    nama = request.form.get('nama_kriteria', '').strip()
+    bobot = float(request.form.get('bobot', 0.0))
+    tipe = request.form.get('tipe', 'Benefit')
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -475,9 +500,9 @@ def add_kriteria():
 
 @app.route('/kriteria/edit/<int:id>', methods=['POST'])
 def edit_kriteria(id):
-    nama = request.form['nama_kriteria'].strip()
-    bobot = float(request.form['bobot'])
-    tipe = request.form['tipe']
+    nama = request.form.get('nama_kriteria', '').strip()
+    bobot = float(request.form.get('bobot', 0.0))
+    tipe = request.form.get('tipe', 'Benefit')
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -510,7 +535,7 @@ def delete_kriteria(id):
 
 @app.route('/alternatif/add', methods=['POST'])
 def add_alternatif():
-    nama = request.form['nama_alternatif'].strip()
+    nama = request.form.get('nama_alternatif', '').strip()
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -565,7 +590,6 @@ def undo_restore():
 @app.route('/seed')
 def seed():
     try:
-        # Buat backup otomatis sebelum ditimpa data PPT
         create_backup_snapshot("Sebelum Muat Ulang Kasus PPT")
         seed_default_data()
         flash('Studi kasus default (Transportasi dari PPT) berhasil dimuat! Data lama otomatis dicadangkan (bisa di-Undo).', 'info')
@@ -575,19 +599,36 @@ def seed():
 
 @app.route('/reset')
 def reset():
+    conn = None
     try:
-        # Buat backup otomatis sebelum reset total
         create_backup_snapshot("Sebelum Reset Database Kosong")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("TRUNCATE TABLE nilai_rating, kriteria, alternatif RESTART IDENTITY CASCADE;")
         conn.commit()
         cursor.close()
-        conn.close()
         flash('Database berhasil dikosongkan! Data lama otomatis dicadangkan (bisa di-Undo via menu Database).', 'warning')
     except Exception as e:
+        if conn:
+            conn.rollback()
         flash(f'Gagal membersihkan database: {str(e)}', 'danger')
+    finally:
+        if conn:
+            conn.close()
     return redirect(url_for('index'))
+
+# Error Handler Khusus agar tidak muncul 'Internal Server Error' tanpa jejak
+@app.errorhandler(500)
+def internal_error(error):
+    err_msg = traceback.format_exc()
+    return f"""
+    <div style="font-family: sans-serif; padding: 30px; max-width: 800px; margin: 40px auto; border: 1px solid #dc3545; border-radius: 8px; background: #fff;">
+        <h2 style="color: #dc3545; margin-top:0;">⚠️ Terjadi Kesalahan Internal (Error 500)</h2>
+        <p>Aplikasi mengalami galat saat memproses data. Rincian error:</p>
+        <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #e9ecef; overflow-x: auto; color: #d63384; font-size: 0.9em;">{err_msg}</pre>
+        <a href="/" style="display: inline-block; padding: 10px 20px; background: #0d6efd; color: #fff; text-decoration: none; border-radius: 5px;">Kembali ke Beranda</a>
+    </div>
+    """, 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
